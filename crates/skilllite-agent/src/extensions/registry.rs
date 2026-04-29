@@ -16,12 +16,27 @@ use crate::skills::{self, LoadedSkill};
 use crate::types::{EventSink, ToolDefinition, ToolResult};
 use serde_json::Value;
 
+/// Discriminator for planning-control tools so the agent loop dispatches via a
+/// closed `match` instead of a string compare. Each variant maps 1:1 to a
+/// registered planning-control tool name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlanningControlKind {
+    /// `update_task_plan` — replace the planner's task list.
+    UpdateTaskPlan,
+    /// `complete_task` — mark the current task done with a declared completion type.
+    CompleteTask,
+}
+
 /// Executor for planning control tools (complete_task, update_task_plan).
 /// Implemented by the agent loop; passed to `registry.execute()` when available.
+///
+/// The executor receives a typed [`PlanningControlKind`] so that the agent loop
+/// dispatches via a closed `match` (rather than a string compare on tool name)
+/// — see `spec/architecture-boundaries.md` MUST NOT.
 pub trait PlanningControlExecutor {
     fn execute(
         &mut self,
-        tool_name: &str,
+        kind: PlanningControlKind,
         arguments: &str,
         event_sink: &mut dyn EventSink,
     ) -> ToolResult;
@@ -138,7 +153,10 @@ impl CapabilityPolicy {
 
 #[cfg(test)]
 mod tests {
-    use super::{CapabilityPolicy, ExtensionRegistry, ToolExecutionProfile};
+    use super::{
+        CapabilityPolicy, ExtensionRegistry, PlanningControlKind, ResultProcessingProfile,
+        ToolExecutionProfile,
+    };
     use crate::types::SilentEventSink;
 
     #[test]
@@ -208,6 +226,44 @@ mod tests {
             .tool_profile("run_command")
             .expect("run_command profile");
         assert_eq!(run_command, ToolExecutionProfile::new(false, true, false));
+    }
+
+    #[test]
+    fn planning_control_kind_lookup_returns_typed_enum_for_registered_tools() {
+        let registry = ExtensionRegistry::new(true, false, &[]);
+        assert_eq!(
+            registry.planning_control_kind("update_task_plan"),
+            Some(PlanningControlKind::UpdateTaskPlan)
+        );
+        assert_eq!(
+            registry.planning_control_kind("complete_task"),
+            Some(PlanningControlKind::CompleteTask)
+        );
+        assert_eq!(registry.planning_control_kind("read_file"), None);
+        assert_eq!(registry.planning_control_kind("not_a_real_tool"), None);
+    }
+
+    #[test]
+    fn result_processing_profile_lookup_falls_back_to_standard_for_unknown_tools() {
+        let registry = ExtensionRegistry::new(true, false, &[]);
+        assert_eq!(
+            registry.result_processing_profile("read_file"),
+            ResultProcessingProfile::ContentPreservingLarge
+        );
+        assert_eq!(
+            registry.result_processing_profile("chat_history"),
+            ResultProcessingProfile::ContentPreservingStandard
+        );
+        assert_eq!(
+            registry.result_processing_profile("write_file"),
+            ResultProcessingProfile::Standard
+        );
+        // Unknown tool: must default to Standard so unregistered tools keep
+        // the same overflow behavior as any standard tool.
+        assert_eq!(
+            registry.result_processing_profile("not_a_real_tool"),
+            ResultProcessingProfile::Standard
+        );
     }
 
     #[tokio::test]
@@ -301,13 +357,42 @@ pub enum ToolHandler {
     Skill {
         skill_name: String,
     },
-    /// Control tools (complete_task, update_task_plan) executed via PlanningControlExecutor.
-    PlanningControl,
+    /// Control tool (e.g. complete_task, update_task_plan) executed via
+    /// [`PlanningControlExecutor`]. The carried [`PlanningControlKind`] is what
+    /// the executor dispatches on; the tool's string name is no longer the
+    /// routing key.
+    PlanningControl(PlanningControlKind),
     /// Outbound MCP: `server_id` matches configured alias; `remote_tool` is the server tool name.
     Mcp {
         server_id: String,
         remote_tool: String,
     },
+}
+
+/// How an oversized tool result should be processed before being handed back to the LLM.
+///
+/// This metadata lives on [`RegisteredTool`] so the agent loop can pick the
+/// right truncation/summarization strategy without a `tool_name == "..."`
+/// branch (see `spec/architecture-boundaries.md` MUST NOT).
+///
+/// The three variants encode the three observable behaviors that previously
+/// existed in `agent_loop/helpers.rs`:
+/// * `Standard` — short → as-is, medium → simple truncate, long → LLM summarize
+///   (with head+tail truncation as fallback).
+/// * `ContentPreservingStandard` — same standard cap, but never LLM-summarized;
+///   on overflow uses head+tail truncation.
+/// * `ContentPreservingLarge` — uses the larger
+///   `SKILLLITE_READ_FILE_TOOL_RESULT_MAX_CHARS` budget and head+tail truncation;
+///   never LLM-summarized.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ResultProcessingProfile {
+    /// Default: short→as-is, medium→truncate, long→LLM summarize (with fallback).
+    #[default]
+    Standard,
+    /// Standard cap, but content is preserved verbatim (head+tail truncation, no LLM summarization).
+    ContentPreservingStandard,
+    /// Larger dedicated cap (`SKILLLITE_READ_FILE_TOOL_RESULT_MAX_CHARS`); never LLM-summarized.
+    ContentPreservingLarge,
 }
 
 /// A tool registration that keeps definition, capability requirements, scope, and handler together.
@@ -318,6 +403,7 @@ pub struct RegisteredTool {
     pub handler: ToolHandler,
     pub scope: ToolScope,
     profile: ToolExecutionProfile,
+    result_processing: ResultProcessingProfile,
 }
 
 impl RegisteredTool {
@@ -333,6 +419,7 @@ impl RegisteredTool {
             handler,
             scope: ToolScope::AllModes,
             profile,
+            result_processing: ResultProcessingProfile::default(),
         }
     }
 
@@ -345,6 +432,14 @@ impl RegisteredTool {
     #[must_use]
     pub fn with_execution_profile(mut self, profile: ToolExecutionProfile) -> Self {
         self.profile = profile;
+        self
+    }
+
+    /// Override how the agent loop processes oversized results from this tool.
+    /// Defaults to [`ResultProcessingProfile::Standard`] (LLM-summarize on overflow).
+    #[must_use]
+    pub fn with_result_processing_profile(mut self, profile: ResultProcessingProfile) -> Self {
+        self.result_processing = profile;
         self
     }
 
@@ -392,6 +487,11 @@ impl RegisteredTool {
 
     pub fn execution_profile(&self) -> ToolExecutionProfile {
         self.profile
+    }
+
+    /// Returns how the agent loop should process oversized results from this tool.
+    pub fn result_processing_profile(&self) -> ResultProcessingProfile {
+        self.result_processing
     }
 
     pub fn is_read_only(&self) -> bool {
@@ -862,6 +962,26 @@ impl<'a> ExtensionRegistry<'a> {
         self.tools_by_name.get(name).map(|t| t.execution_profile())
     }
 
+    /// Returns the result-processing profile for a tool, or [`ResultProcessingProfile::Standard`]
+    /// for unknown tools (so the agent loop's overflow path defaults to LLM
+    /// summarization, matching the behavior for any tool not specially registered).
+    pub fn result_processing_profile(&self, name: &str) -> ResultProcessingProfile {
+        self.tools_by_name
+            .get(name)
+            .map(|t| t.result_processing_profile())
+            .unwrap_or_default()
+    }
+
+    /// Returns the planning-control kind for a tool, or `None` if it is not a
+    /// planning-control tool. Lets the agent loop dispatch by typed enum
+    /// instead of string-matching on tool names.
+    pub fn planning_control_kind(&self, name: &str) -> Option<PlanningControlKind> {
+        self.tools_by_name.get(name).and_then(|t| match t.handler {
+            ToolHandler::PlanningControl(kind) => Some(kind),
+            _ => None,
+        })
+    }
+
     /// Render/use tool result via the tool's unified lifecycle hook.
     pub fn render_tool_result(
         &self,
@@ -927,9 +1047,9 @@ impl<'a> ExtensionRegistry<'a> {
         }
 
         match &registered.handler {
-            ToolHandler::PlanningControl => {
+            ToolHandler::PlanningControl(kind) => {
                 if let Some(ctx) = planning_ctx {
-                    ctx.execute(tool_name, arguments, event_sink)
+                    ctx.execute(*kind, arguments, event_sink)
                 } else {
                     ToolResult {
                         tool_call_id: String::new(),

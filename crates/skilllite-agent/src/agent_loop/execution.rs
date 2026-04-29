@@ -10,7 +10,9 @@ use std::time::Instant;
 
 use serde_json::Value;
 
-use super::super::extensions::{self, MemoryVectorContext, PlanningControlExecutor};
+use super::super::extensions::{
+    self, MemoryVectorContext, PlanningControlExecutor, PlanningControlKind,
+};
 use super::super::llm::LlmClient;
 use super::super::skills::LoadedSkill;
 use super::super::task_planner::TaskPlanner;
@@ -262,51 +264,47 @@ struct PlanningControlExecutorImpl<'a> {
 impl PlanningControlExecutor for PlanningControlExecutorImpl<'_> {
     fn execute(
         &mut self,
-        tool_name: &str,
+        kind: PlanningControlKind,
         arguments: &str,
         event_sink: &mut dyn super::super::types::EventSink,
     ) -> super::super::types::ToolResult {
-        if tool_name == "update_task_plan" {
-            self.state.replan_count += 1;
-            let mut r = handle_update_task_plan(arguments, self.planner, self.skills, event_sink);
-            if !r.is_error && self.state.replan_count >= MAX_REPLANS_PER_SESSION {
-                r.content.push_str(&format!(
-                    "\n\n⚠️ You have now replanned {} time(s). \
-                     Please STOP replanning and EXECUTE the current plan step by step. \
-                     Do NOT call update_task_plan again.",
-                    self.state.replan_count
-                ));
-                tracing::info!(
-                    "Replan soft limit reached ({}/{})",
-                    self.state.replan_count,
-                    MAX_REPLANS_PER_SESSION
-                );
+        match kind {
+            PlanningControlKind::UpdateTaskPlan => {
+                self.state.replan_count += 1;
+                let mut r =
+                    handle_update_task_plan(arguments, self.planner, self.skills, event_sink);
+                if !r.is_error && self.state.replan_count >= MAX_REPLANS_PER_SESSION {
+                    r.content.push_str(&format!(
+                        "\n\n⚠️ You have now replanned {} time(s). \
+                         Please STOP replanning and EXECUTE the current plan step by step. \
+                         Do NOT call update_task_plan again.",
+                        self.state.replan_count
+                    ));
+                    tracing::info!(
+                        "Replan soft limit reached ({}/{})",
+                        self.state.replan_count,
+                        MAX_REPLANS_PER_SESSION
+                    );
+                }
+                r
             }
-            r
-        } else if tool_name == "complete_task" {
-            let declared = parse_completion_type_from_arguments(arguments);
-            if declared == TaskCompletionType::Success
-                && (self.state.failed_tool_calls > 0 || self.state.replan_count > 0)
-            {
-                return super::super::types::ToolResult {
-                    tool_call_id: String::new(),
-                    tool_name: "complete_task".to_string(),
-                    content: "completion_type=success conflicts with execution signals \
-                              (failed tools or replans observed). \
-                              Use completion_type=partial_success or failure."
-                        .to_string(),
-                    is_error: true,
-                    counts_as_failure: true,
-                };
-            }
-            handle_complete_task(arguments, self.planner, event_sink)
-        } else {
-            super::super::types::ToolResult {
-                tool_call_id: String::new(),
-                tool_name: tool_name.to_string(),
-                content: format!("Unknown planning control tool: {}", tool_name),
-                is_error: true,
-                counts_as_failure: true,
+            PlanningControlKind::CompleteTask => {
+                let declared = parse_completion_type_from_arguments(arguments);
+                if declared == TaskCompletionType::Success
+                    && (self.state.failed_tool_calls > 0 || self.state.replan_count > 0)
+                {
+                    return super::super::types::ToolResult {
+                        tool_call_id: String::new(),
+                        tool_name: "complete_task".to_string(),
+                        content: "completion_type=success conflicts with execution signals \
+                                  (failed tools or replans observed). \
+                                  Use completion_type=partial_success or failure."
+                            .to_string(),
+                        is_error: true,
+                        counts_as_failure: true,
+                    };
+                }
+                handle_complete_task(arguments, self.planner, event_sink)
             }
         }
     }
@@ -356,8 +354,10 @@ pub(super) async fn execute_tool_batch_planning(
         event_sink.on_tool_call_with_id(Some(&tc.id), tool_name, arguments);
         append_tool_call_to_transcript(session_key, &tc.id, tool_name, arguments);
 
-        let is_planning_control =
-            tool_name.as_str() == "update_task_plan" || tool_name.as_str() == "complete_task";
+        let planning_kind = registry.planning_control_kind(tool_name);
+        let is_planning_control = planning_kind.is_some();
+        let is_complete_task = matches!(planning_kind, Some(PlanningControlKind::CompleteTask));
+        let result_profile = registry.result_processing_profile(tool_name);
 
         if task_transitioned {
             tracing::info!(
@@ -413,7 +413,8 @@ pub(super) async fn execute_tool_batch_planning(
         )
         .await;
         result.tool_call_id = tc.id.clone();
-        result.content = process_result_content(client, model, tool_name, &result.content).await;
+        result.content =
+            process_result_content(client, model, result_profile, &result.content).await;
 
         if result.counts_as_failure {
             planning_executor.state.failed_tool_calls += 1;
@@ -422,7 +423,7 @@ pub(super) async fn execute_tool_batch_planning(
                 .state
                 .record_failure(tool_name, &result.content);
 
-            if tool_name.as_str() == "complete_task"
+            if is_complete_task
                 && repeat_count >= PLANNING_CONTROL_AUTO_RECOVER_THRESHOLD
                 && planning_executor.state.total_tool_calls > 0
             {
@@ -461,7 +462,7 @@ pub(super) async fn execute_tool_batch_planning(
                      or (3) skip this step and proceed to the next task.",
                     tool_name, repeat_count
                 ));
-            } else if tool_name.as_str() != "complete_task" {
+            } else if !is_complete_task {
                 result.content.push_str(
                     "\n\nTip: If this approach is wrong or the plan is no longer valid, \
                      call update_task_plan with a revised task list, then continue with the new plan."
@@ -477,7 +478,7 @@ pub(super) async fn execute_tool_batch_planning(
             planning_executor.state.tool_calls_current_task = 0;
             task_transitioned = true;
         }
-        if tool_name.as_str() == "complete_task" && !result.is_error {
+        if is_complete_task && !result.is_error {
             let completion_type = parse_completion_type_from_arguments(arguments);
             planning_executor
                 .state
@@ -553,13 +554,15 @@ pub(super) async fn execute_tool_batch_simple(
         event_sink.on_tool_call_with_id(Some(&tc.id), tool_name, arguments);
         append_tool_call_to_transcript(session_key, &tc.id, tool_name, arguments);
 
+        let result_profile = registry.result_processing_profile(tool_name);
         let start_time = Instant::now();
         let mut result = execute_tool_call(
             registry, tool_name, arguments, workspace, event_sink, embed_ctx, None,
         )
         .await;
         result.tool_call_id = tc.id.clone();
-        result.content = process_result_content(client, model, tool_name, &result.content).await;
+        result.content =
+            process_result_content(client, model, result_profile, &result.content).await;
 
         if result.counts_as_failure {
             state.failed_tool_calls += 1;

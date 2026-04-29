@@ -27,7 +27,10 @@ use std::path::Path;
 use crate::types::{self, safe_slice_from, safe_truncate, EventSink, ToolDefinition, ToolResult};
 use helpers::*;
 
-use super::registry::{RegisteredTool, ToolCapability, ToolHandler, ToolScope};
+use super::registry::{
+    PlanningControlKind, RegisteredTool, ResultProcessingProfile, ToolCapability, ToolHandler,
+    ToolScope,
+};
 
 // ─── Tool definitions (aggregated from submodules) ───────────────────────────
 
@@ -42,23 +45,61 @@ pub fn get_builtin_tool_definitions() -> Vec<ToolDefinition> {
     tools
 }
 
-/// Built-in tools paired with capability requirements and handlers.
+/// Built-in tools paired with capability requirements, handlers, and (where applicable)
+/// planning-control kind / oversized-result processing profile.
+///
+/// The mapping below is the **single source of truth** for routing metadata; the
+/// agent loop dispatches via the typed handler/profile here and never branches
+/// on tool name (see `spec/architecture-boundaries.md` MUST NOT).
 pub fn get_builtin_tools() -> Vec<RegisteredTool> {
     get_builtin_tool_definitions()
         .into_iter()
         .map(|definition| {
             let name = definition.function.name.as_str();
             let capabilities = builtin_capabilities(name);
-            let (handler, scope) = if matches!(name, "complete_task" | "update_task_plan") {
-                (ToolHandler::PlanningControl, ToolScope::PlanningOnly)
-            } else if is_async_builtin_tool(name) {
-                (ToolHandler::BuiltinAsync, ToolScope::AllModes)
-            } else {
-                (ToolHandler::BuiltinSync, ToolScope::AllModes)
+            let (handler, scope) = match planning_control_kind_for(name) {
+                Some(kind) => (ToolHandler::PlanningControl(kind), ToolScope::PlanningOnly),
+                None if is_async_builtin_tool(name) => {
+                    (ToolHandler::BuiltinAsync, ToolScope::AllModes)
+                }
+                None => (ToolHandler::BuiltinSync, ToolScope::AllModes),
             };
-            RegisteredTool::new(definition, capabilities, handler).with_scope(scope)
+            let result_processing = result_processing_profile_for(name);
+            RegisteredTool::new(definition, capabilities, handler)
+                .with_scope(scope)
+                .with_result_processing_profile(result_processing)
         })
         .collect()
+}
+
+/// Map built-in tool name → typed [`PlanningControlKind`].
+/// Returns `None` for non-planning-control tools.
+///
+/// This mapping lives in the extension layer (allowed by
+/// `spec/architecture-boundaries.md`); the agent loop receives only the typed
+/// enum and never compares strings.
+fn planning_control_kind_for(name: &str) -> Option<PlanningControlKind> {
+    match name {
+        "update_task_plan" => Some(PlanningControlKind::UpdateTaskPlan),
+        "complete_task" => Some(PlanningControlKind::CompleteTask),
+        _ => None,
+    }
+}
+
+/// Map built-in tool name → its oversized-result [`ResultProcessingProfile`].
+///
+/// Tools omitted from the table inherit [`ResultProcessingProfile::Standard`]
+/// (LLM-summarize on overflow). Same architectural rationale as
+/// [`planning_control_kind_for`].
+fn result_processing_profile_for(name: &str) -> ResultProcessingProfile {
+    match name {
+        // `read_file` has its own larger budget (`SKILLLITE_READ_FILE_TOOL_RESULT_MAX_CHARS`)
+        // and must hand the LLM verbatim content for downstream content-transfer use cases.
+        "read_file" => ResultProcessingProfile::ContentPreservingLarge,
+        // `chat_history` shares the standard cap but must never be summarized away.
+        "chat_history" => ResultProcessingProfile::ContentPreservingStandard,
+        _ => ResultProcessingProfile::Standard,
+    }
 }
 
 fn builtin_capabilities(name: &str) -> Vec<ToolCapability> {

@@ -348,55 +348,57 @@ pub(super) async fn execute_tool_call(
         .await
 }
 
-/// Tools whose results must never be LLM-summarized because the LLM needs the
-/// content verbatim (e.g. for content transfer between files, or re-use).
-/// For these tools, we only do simple truncation as a last resort.
-pub(super) const CONTENT_PRESERVING_TOOLS: &[&str] = &["read_file", "chat_history"];
-
 /// Process tool result content: sync fast path, then async LLM summarization.
 ///
-/// Returns the processed content string.
-/// - Short content: returned as-is (sync)
-/// - Medium content: truncated (sync)
-/// - Very long content: LLM summarized (async) with sync fallback on error
+/// The `profile` is supplied by [`extensions::ExtensionRegistry::result_processing_profile`]
+/// so the agent loop dispatches by structured signal (per
+/// `spec/architecture-boundaries.md` and `spec/structured-signal-first.md`)
+/// rather than branching on tool names.
 ///
-/// `tool_name` controls whether LLM summarization is allowed. For content-
-/// preserving tools like `read_file`, only simple truncation is used so the
-/// actual content is never destroyed by summarization.
+/// Behavior by profile:
+/// - [`ResultProcessingProfile::ContentPreservingLarge`]: bypass standard cap;
+///   use the larger `SKILLLITE_READ_FILE_TOOL_RESULT_MAX_CHARS` budget; never summarize.
+/// - [`ResultProcessingProfile::ContentPreservingStandard`]: standard cap; on
+///   overflow use head+tail truncation; never LLM summarize.
+/// - [`ResultProcessingProfile::Standard`] (default): short → as-is, medium → simple
+///   truncate, long → LLM summarize (with head+tail truncation as final fallback).
 pub(super) async fn process_result_content(
     client: &LlmClient,
     model: &str,
-    tool_name: &str,
+    profile: extensions::ResultProcessingProfile,
     content: &str,
 ) -> String {
-    if tool_name == "read_file" {
-        return extensions::process_read_file_tool_result_content(content);
-    }
-
-    // Try sync fast path first
-    match extensions::process_tool_result_content(content) {
-        Some(processed) => processed,
-        None => {
-            // Content exceeds summarize threshold.
-            // For content-preserving tools (read_file), never summarize — the
-            // LLM needs the actual content. Use head+tail truncation instead.
-            if CONTENT_PRESERVING_TOOLS.contains(&tool_name) {
-                tracing::info!(
-                    "Tool '{}' result {} chars exceeds threshold, using head+tail truncation (no LLM summarization)",
-                    tool_name, content.len()
-                );
-                extensions::process_tool_result_content_fallback(content)
-            } else {
-                tracing::info!(
-                    "Tool '{}' result {} chars exceeds summarize threshold, using LLM summarization",
-                    tool_name, content.len()
-                );
-                let summary = long_text::summarize_long_content(client, model, content).await;
-                if summary.is_empty() {
-                    // Fallback to sync head+tail truncation
+    match profile {
+        extensions::ResultProcessingProfile::ContentPreservingLarge => {
+            extensions::process_read_file_tool_result_content(content)
+        }
+        extensions::ResultProcessingProfile::ContentPreservingStandard => {
+            match extensions::process_tool_result_content(content) {
+                Some(processed) => processed,
+                None => {
+                    tracing::info!(
+                        "Tool result {} chars exceeds threshold (content-preserving profile), \
+                         using head+tail truncation (no LLM summarization)",
+                        content.len()
+                    );
                     extensions::process_tool_result_content_fallback(content)
-                } else {
-                    summary
+                }
+            }
+        }
+        extensions::ResultProcessingProfile::Standard => {
+            match extensions::process_tool_result_content(content) {
+                Some(processed) => processed,
+                None => {
+                    tracing::info!(
+                        "Tool result {} chars exceeds summarize threshold, using LLM summarization",
+                        content.len()
+                    );
+                    let summary = long_text::summarize_long_content(client, model, content).await;
+                    if summary.is_empty() {
+                        extensions::process_tool_result_content_fallback(content)
+                    } else {
+                        summary
+                    }
                 }
             }
         }

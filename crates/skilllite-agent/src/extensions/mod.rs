@@ -18,6 +18,6 @@ pub use builtin::{
 pub use memory::{build_memory_context, index_evolution_knowledge};
 pub use registry::{
     CapabilityPolicy, ExtensionRegistry, ExtensionRegistryBuilder, MemoryVectorContext,
-    PlanningControlExecutor, RegisteredTool, ToolAvailabilityView, ToolCapability,
-    ToolExecutionProfile, ToolHandler, ToolScope,
+    PlanningControlExecutor, PlanningControlKind, RegisteredTool, ResultProcessingProfile,
+    ToolAvailabilityView, ToolCapability, ToolExecutionProfile, ToolHandler, ToolScope,
 };

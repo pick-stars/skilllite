@@ -1,6 +1,6 @@
 # Task Board
 
-Last updated: 2026-04-28 (TASK-2026-062 wiki lesson optimization template done)
+Last updated: 2026-04-29 (TASK-2026-063 extension tool metadata dispatch done)
 
 ## In Progress
 
@@ -16,6 +16,7 @@ Last updated: 2026-04-28 (TASK-2026-062 wiki lesson optimization template done)
 
 ## Done
 
+- `TASK-2026-063-extension-tool-metadata-dispatch` - Status: `done` - Owner: `agent`
 - `TASK-2026-062-wiki-lesson-optimization-template` - Status: `done` - Owner: `agent`
 - `TASK-2026-061-conversation-wiki-suggestion` - Status: `done` - Owner: `agent`
 - `TASK-2026-060-repo-wiki-dynamic-refresh` - Status: `done` - Owner: `agent`
