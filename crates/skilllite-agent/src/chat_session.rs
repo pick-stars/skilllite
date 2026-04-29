@@ -1061,10 +1061,12 @@ fn is_history_relevant_entry(entry: &transcript::TranscriptEntry) -> bool {
 }
 
 fn history_window_messages_limit() -> usize {
-    std::env::var("SKILLLITE_HISTORY_WINDOW_MESSAGES")
-        .ok()
-        .and_then(|v| v.trim().parse::<usize>().ok())
-        .unwrap_or(200)
+    std::env::var(
+        skilllite_core::config::env_keys::summarization::SKILLLITE_HISTORY_WINDOW_MESSAGES,
+    )
+    .ok()
+    .and_then(|v| v.trim().parse::<usize>().ok())
+    .unwrap_or(200)
 }
 
 fn prune_cache_before_last_compaction(cache: &mut TranscriptCache, paths: &[PathBuf]) {

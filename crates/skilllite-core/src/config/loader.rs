@@ -2,27 +2,35 @@
 //!
 //! 集中维护 fallback 链，避免在业务代码中重复 `or_else` 调用。
 
+use super::env_keys::{cache as cache_keys, observability as obv_keys, sandbox as sb_keys};
 use std::env;
 
 /// 废弃变量 → 推荐变量映射（用于检测并提示迁移）
+///
+/// Right-hand side names are resolved through `env_keys` constants so any
+/// rename of a canonical name flows through here automatically and is
+/// covered by the `all_skilllite_env_literals_are_registered` test.
 const DEPRECATED_PAIRS: &[(&str, &str)] = &[
-    ("SKILLBOX_AUDIT_LOG", "SKILLLITE_AUDIT_LOG"),
-    ("SKILLBOX_QUIET", "SKILLLITE_QUIET"),
-    ("SKILLBOX_CACHE_DIR", "SKILLLITE_CACHE_DIR"),
-    ("AGENTSKILL_CACHE_DIR", "SKILLLITE_CACHE_DIR"),
-    ("SKILLBOX_LOG_LEVEL", "SKILLLITE_LOG_LEVEL"),
-    ("SKILLBOX_LOG_JSON", "SKILLLITE_LOG_JSON"),
-    ("SKILLBOX_SANDBOX_LEVEL", "SKILLLITE_SANDBOX_LEVEL"),
-    ("SKILLBOX_MAX_MEMORY_MB", "SKILLLITE_MAX_MEMORY_MB"),
-    ("SKILLBOX_TIMEOUT_SECS", "SKILLLITE_TIMEOUT_SECS"),
-    ("SKILLBOX_AUTO_APPROVE", "SKILLLITE_AUTO_APPROVE"),
-    ("SKILLBOX_NO_SANDBOX", "SKILLLITE_NO_SANDBOX"),
+    ("SKILLBOX_AUDIT_LOG", obv_keys::SKILLLITE_AUDIT_LOG),
+    ("SKILLBOX_QUIET", obv_keys::SKILLLITE_QUIET),
+    ("SKILLBOX_CACHE_DIR", cache_keys::SKILLLITE_CACHE_DIR),
+    ("AGENTSKILL_CACHE_DIR", cache_keys::SKILLLITE_CACHE_DIR),
+    ("SKILLBOX_LOG_LEVEL", obv_keys::SKILLLITE_LOG_LEVEL),
+    ("SKILLBOX_LOG_JSON", obv_keys::SKILLLITE_LOG_JSON),
+    ("SKILLBOX_SANDBOX_LEVEL", sb_keys::SKILLLITE_SANDBOX_LEVEL),
+    ("SKILLBOX_MAX_MEMORY_MB", sb_keys::SKILLLITE_MAX_MEMORY_MB),
+    ("SKILLBOX_TIMEOUT_SECS", sb_keys::SKILLLITE_TIMEOUT_SECS),
+    ("SKILLBOX_AUTO_APPROVE", sb_keys::SKILLLITE_AUTO_APPROVE),
+    ("SKILLBOX_NO_SANDBOX", sb_keys::SKILLLITE_NO_SANDBOX),
     (
         "SKILLBOX_ALLOW_LINUX_NAMESPACE_FALLBACK",
-        "SKILLLITE_ALLOW_LINUX_NAMESPACE_FALLBACK",
+        sb_keys::SKILLLITE_ALLOW_LINUX_NAMESPACE_FALLBACK,
     ),
-    ("SKILLBOX_ALLOW_PLAYWRIGHT", "SKILLLITE_ALLOW_PLAYWRIGHT"),
-    ("SKILLBOX_SCRIPT_ARGS", "SKILLLITE_SCRIPT_ARGS"),
+    (
+        "SKILLBOX_ALLOW_PLAYWRIGHT",
+        sb_keys::SKILLLITE_ALLOW_PLAYWRIGHT,
+    ),
+    ("SKILLBOX_SCRIPT_ARGS", sb_keys::SKILLLITE_SCRIPT_ARGS),
 ];
 
 /// 检测废弃变量：若使用了废弃变量且未设置推荐变量，打印一次迁移提示

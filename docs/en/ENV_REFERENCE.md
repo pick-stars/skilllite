@@ -436,3 +436,56 @@ SKILLLITE_AUDIT_LOG=/var/log/skilllite/audit.jsonl
 
 SKILLLITE_SECURITY_EVENTS_LOG=~/.skilllite/audit/security.jsonl
 ```
+
+---
+
+## Advanced / Internal Tunables
+
+The variables below were always honored in code but were previously
+undocumented. They are now declared in
+`crates/skilllite-core/src/config/env_keys.rs` and enforced by the
+`all_skilllite_env_literals_are_registered` consistency test.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SKILLLITE_GOAL_LLM_EXTRACT` | `0` | Set to `1` to fall back to LLM extraction when regex-based goal-boundary detection yields nothing. |
+| `SKILLLITE_HISTORY_WINDOW_MESSAGES` | `200` | In-memory history window size before pruning during a chat session. |
+| `SKILLLITE_AGENT_MCP_CLIENT` | `1` | Set to `0` to disable the agent's built-in MCP client bootstrap (no MCP servers will be auto-attached). |
+| `SKILLLITE_MCP_SERVERS_JSON` | (unset) | Inline JSON array of MCP server entries. Used by the desktop bridge to pass MCP config to spawned CLI processes. |
+| `SKILLLITE_TRUST_BYPASS_CONFIRM` | `0` | Set to `1`/`true` to bypass the trust-confirmation prompt during `skilllite execute`. |
+| `SKILLLITE_TRANSCRIPT_FLUSH_MODE` | `hybrid` | Transcript flush policy: `every` / `interval` / `hybrid` / `always`. |
+| `SKILLLITE_TRANSCRIPT_FLUSH_EVERY` | (built-in) | Flush after every N events (used by `every` and `hybrid`). |
+| `SKILLLITE_TRANSCRIPT_FLUSH_INTERVAL_MS` | (built-in) | Flush after this many milliseconds (used by `interval` and `hybrid`). |
+| `SKILLLITE_SWARM_LLM_ROUTING` | `1` | Set to `0` to disable LLM routing decisions in `skilllite swarm` and fall back to static rules. |
+| `SKILLLITE_AUTO_APPROVE_RUNTIME` | `0` | Set to `1` to skip the interactive runtime-dependency download confirmation. |
+| `SKILLLITE_RUNTIME_PYTHON_BASE_URL` | (built-in) | Override base URL for downloading the bundled Python runtime (mirror support). |
+| `SKILLLITE_RUNTIME_NODE_BASE_URL` | (built-in) | Override base URL for downloading the bundled Node.js runtime (mirror support). |
+| `SKILLLITE_MAX_PROCESSES` | `512` (macOS) / `50` (other) | Maximum child processes allowed by the sandbox launcher. |
+| `SKILLLITE_NETWORK_DISABLED` | (set by sandbox) | Set to `1` by the sandbox launcher when the child must operate without network. |
+| `SKILLLITE_SANDBOX` | (set by sandbox) | Set to `1` by the sandbox launcher; consulted by inner code paths to detect sandbox context. |
+| `SKILLLITE_FUZZY_THRESHOLD` | `0.85` | Fuzzy similarity threshold for `apply_replace_*` matchers. |
+| `SKILLLITE_MIN_PATTERN_COUNT` | `3` (`2` when `--force`) | Minimum recurrence count for a tool/argument pattern to be considered for skill synthesis. |
+| `SKILLLITE_SKILL_DEDUP_DESCRIPTION` | `1` | Set to `0` to disable description-similarity dedup during skill synthesis. |
+| `SKILLLITE_EXTERNAL_LEARNING` | `0` | Set to `1`/`true` to enable ingestion of external (community) learners. |
+| `SKILLLITE_EVO_FORCE_PROPOSAL_ID` | (unset) | Force a specific proposal id during evolution dry-run / debug. |
+| `SKILLLITE_ENABLE_MEMORY` | `true` | Master switch for the conversation-memory subsystem. |
+| `SKILLLITE_ENABLE_MEMORY_VECTOR` | `false` | Enable the vector-search backend for memory. |
+| `SKILLLITE_EMBEDDING_BASE_URL` | (LLM `API_BASE`) | Optional separate embedding API base; falls back to the main LLM `API_BASE` chain. |
+| `SKILLLITE_EMBEDDING_API_KEY` | (LLM `API_KEY`) | Optional separate embedding API key; falls back to the main LLM `API_KEY` chain. |
+| `SKILLLITE_HEARTBEAT_INTERVAL_SECS` | (desktop default) | Desktop assistant life-pulse refresh interval (seconds). |
+| `SKILLLITE_GATEWAY_SERVE_ALLOW` | (set by desktop) | Internal flag the desktop sets to authorize the gateway-serve subcommand. |
+| `SKILLLITE_CHANNEL_HTTP_ADDR` | (printed at runtime) | Bound address printed to stderr when `skilllite channel-serve` starts. |
+| `SKILLLITE_ARTIFACT_HTTP_ADDR` | (printed at runtime) | Bound address printed to stdout when `skilllite artifact serve` starts. |
+
+For the long-text summarization tunables (`SKILLLITE_CHUNK_SIZE`,
+`SKILLLITE_HEAD_CHUNKS`, `SKILLLITE_TAIL_CHUNKS`, `SKILLLITE_MAX_OUTPUT_CHARS`,
+`SKILLLITE_MAP_MODEL`, `SKILLLITE_LONG_TEXT_STRATEGY`,
+`SKILLLITE_EXTRACT_TOP_K_RATIO`, `SKILLLITE_SUMMARIZE_THRESHOLD`,
+`SKILLLITE_MAX_TOKENS`, `SKILLLITE_USER_INPUT_MAX_CHARS`,
+`SKILLLITE_TOOL_RESULT_MAX_CHARS`,
+`SKILLLITE_READ_FILE_TOOL_RESULT_MAX_CHARS`,
+`SKILLLITE_TOOL_RESULT_RECOVERY_MAX_CHARS`,
+`SKILLLITE_CONTEXT_SOFT_LIMIT_CHARS`, `SKILLLITE_COMPACTION_THRESHOLD`,
+`SKILLLITE_MEMORY_FLUSH_ENABLED`, `SKILLLITE_MEMORY_FLUSH_THRESHOLD`,
+`SKILLLITE_COMPACTION_KEEP_RECENT`), see inline doc-comments in
+`crates/skilllite-agent/src/types/env_config.rs`.

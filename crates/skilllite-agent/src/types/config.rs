@@ -118,7 +118,9 @@ impl AgentConfig {
             ..Default::default()
         };
 
-        if let Ok(raw) = std::env::var("SKILLLITE_MCP_SERVERS_JSON") {
+        if let Ok(raw) =
+            std::env::var(skilllite_core::config::env_keys::mcp::SKILLLITE_MCP_SERVERS_JSON)
+        {
             config.mcp_servers = super::parse_mcp_servers_json(&raw);
         }
 

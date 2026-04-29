@@ -143,9 +143,11 @@ pub(super) async fn generate_skill_inner<L: EvolutionLlm>(
         return Ok(None);
     }
     // 描述相似去重（可选）：SKILLLITE_SKILL_DEDUP_DESCRIPTION=0 可关闭
-    let dedup_desc = std::env::var("SKILLLITE_SKILL_DEDUP_DESCRIPTION")
-        .map(|v| v != "0")
-        .unwrap_or(true);
+    let dedup_desc = std::env::var(
+        skilllite_core::config::env_keys::evolution::SKILLLITE_SKILL_DEDUP_DESCRIPTION,
+    )
+    .map(|v| v != "0")
+    .unwrap_or(true);
     if dedup_desc {
         for (existing_name, existing_desc) in infer::list_pending_skill_descriptions(pending_dir) {
             if infer::is_description_similar(&parsed.description, &existing_desc) {

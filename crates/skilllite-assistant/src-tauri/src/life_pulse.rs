@@ -235,10 +235,12 @@ pub fn start(state: LifePulseState, skilllite_path: PathBuf, app: tauri::AppHand
             eprintln!("[life-pulse] heartbeat started");
 
             let interval = Duration::from_secs(
-                std::env::var("SKILLLITE_HEARTBEAT_INTERVAL_SECS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(DEFAULT_HEARTBEAT_INTERVAL_SECS),
+                std::env::var(
+                    skilllite_core::config::env_keys::desktop::SKILLLITE_HEARTBEAT_INTERVAL_SECS,
+                )
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(DEFAULT_HEARTBEAT_INTERVAL_SECS),
             );
 
             loop {

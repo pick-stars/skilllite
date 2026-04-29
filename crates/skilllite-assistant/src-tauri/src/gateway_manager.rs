@@ -108,12 +108,19 @@ pub fn start_gateway(
     }
 
     let mut cmd = Command::new(&skilllite_path);
-    cmd.args(build_gateway_cli_args(&bind, token.as_deref(), artifact_dir.as_deref()))
-        .env("SKILLLITE_GATEWAY_SERVE_ALLOW", "1")
-        .current_dir(&working_dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped());
+    cmd.args(build_gateway_cli_args(
+        &bind,
+        token.as_deref(),
+        artifact_dir.as_deref(),
+    ))
+    .env(
+        skilllite_core::config::env_keys::desktop::SKILLLITE_GATEWAY_SERVE_ALLOW,
+        "1",
+    )
+    .current_dir(&working_dir)
+    .stdin(Stdio::null())
+    .stdout(Stdio::null())
+    .stderr(Stdio::piped());
     crate::windows_spawn::hide_child_console(&mut cmd);
 
     let mut child = cmd.spawn().map_err(|e| {
@@ -146,20 +153,13 @@ pub fn start_gateway(
     spawn_gateway_stderr_reader(stderr, state.clone());
     thread::sleep(Duration::from_millis(200));
 
-    let status = status_gateway(
-        state,
-        GatewayStatusRequest {
-            bind: bind.clone(),
-        },
-    )?;
+    let status = status_gateway(state, GatewayStatusRequest { bind: bind.clone() })?;
     if status.running {
         Ok(status)
     } else {
-        Err(
-            status.last_error.unwrap_or_else(|| {
-                "Gateway exited immediately after the desktop app tried to start it".to_string()
-            }),
-        )
+        Err(status.last_error.unwrap_or_else(|| {
+            "Gateway exited immediately after the desktop app tried to start it".to_string()
+        }))
     }
 }
 
@@ -194,7 +194,11 @@ pub fn stop_gateway(state: &GatewayProcessState) -> Result<GatewayManagedStatus,
 }
 
 pub fn cleanup_gateway_process(state: &GatewayProcessState) {
-    let child = state.0.lock().ok().and_then(|mut runtime| runtime.child.take());
+    let child = state
+        .0
+        .lock()
+        .ok()
+        .and_then(|mut runtime| runtime.child.take());
     if let Some(mut child) = child {
         let _ = child.kill();
         let _ = child.wait();

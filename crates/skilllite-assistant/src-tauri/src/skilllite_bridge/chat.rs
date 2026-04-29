@@ -86,13 +86,19 @@ pub fn merge_dotenv_with_chat_overrides(
     use std::collections::HashMap;
     let mut m: HashMap<String, String> = dotenv.into_iter().collect();
 
+    use skilllite_core::config::env_keys::agent_loop as al_keys;
+    use skilllite_core::config::env_keys::mcp as mcp_keys;
+    use skilllite_core::config::env_keys::sandbox as sb_keys;
+    use skilllite_core::config::env_keys::summarization as sum_keys;
+    use skilllite_core::config::env_keys::swarm as swarm_keys;
+
     let swarm_from_ui = cfg
         .swarm_url
         .as_ref()
         .map(|s| !s.is_empty())
         .unwrap_or(false);
     if !swarm_from_ui {
-        m.remove("SKILLLITE_SWARM_URL");
+        m.remove(swarm_keys::SKILLLITE_SWARM_URL);
     }
 
     if let Some(ref key) = cfg.api_key {
@@ -116,26 +122,29 @@ pub fn merge_dotenv_with_chat_overrides(
     }
     if let Some(level) = cfg.sandbox_level {
         if (1..=3).contains(&level) {
-            m.insert("SKILLLITE_SANDBOX_LEVEL".to_string(), level.to_string());
+            m.insert(
+                sb_keys::SKILLLITE_SANDBOX_LEVEL.to_string(),
+                level.to_string(),
+            );
         }
     }
     if let Some(ref url) = cfg.swarm_url {
         if !url.is_empty() {
-            m.insert("SKILLLITE_SWARM_URL".to_string(), url.clone());
+            m.insert(swarm_keys::SKILLLITE_SWARM_URL.to_string(), url.clone());
         }
     }
     if let Some(n) = cfg.max_iterations.filter(|&n| n > 0) {
-        m.insert("SKILLLITE_MAX_ITERATIONS".to_string(), n.to_string());
+        m.insert(al_keys::SKILLLITE_MAX_ITERATIONS.to_string(), n.to_string());
     }
     if let Some(n) = cfg.max_tool_calls_per_task.filter(|&n| n > 0) {
         m.insert(
-            "SKILLLITE_MAX_TOOL_CALLS_PER_TASK".to_string(),
+            al_keys::SKILLLITE_MAX_TOOL_CALLS_PER_TASK.to_string(),
             n.to_string(),
         );
     }
     if let Some(n) = cfg.context_soft_limit_chars {
         m.insert(
-            "SKILLLITE_CONTEXT_SOFT_LIMIT_CHARS".to_string(),
+            sum_keys::SKILLLITE_CONTEXT_SOFT_LIMIT_CHARS.to_string(),
             n.to_string(),
         );
     }
@@ -180,7 +189,7 @@ pub fn merge_dotenv_with_chat_overrides(
     if let Some(ref servers) = cfg.mcp_servers {
         match serde_json::to_string(servers) {
             Ok(json) => {
-                m.insert("SKILLLITE_MCP_SERVERS_JSON".to_string(), json);
+                m.insert(mcp_keys::SKILLLITE_MCP_SERVERS_JSON.to_string(), json);
             }
             Err(e) => {
                 eprintln!("[skilllite-assistant] mcp_servers serialize error: {}", e);
@@ -266,8 +275,14 @@ pub fn chat_stream(
         cmd.env(k, v);
     }
     cmd.env("RUST_LOG", "error");
-    cmd.env("SKILLLITE_QUIET", "1");
-    cmd.env("SKILLLITE_LOG_JSON", "0");
+    cmd.env(
+        skilllite_core::config::env_keys::observability::SKILLLITE_QUIET,
+        "1",
+    );
+    cmd.env(
+        skilllite_core::config::env_keys::observability::SKILLLITE_LOG_JSON,
+        "0",
+    );
 
     crate::windows_spawn::hide_child_console(&mut cmd);
 

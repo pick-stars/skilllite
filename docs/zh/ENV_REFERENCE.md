@@ -436,3 +436,55 @@ SKILLLITE_AUDIT_LOG=/var/log/skilllite/audit.jsonl
 
 SKILLLITE_SECURITY_EVENTS_LOG=~/.skilllite/audit/security.jsonl
 ```
+
+---
+
+## 高级 / 内部调优变量
+
+下列变量在代码中早已生效，但此前未在文档中正式列出。现已在
+`crates/skilllite-core/src/config/env_keys.rs` 中登记，由
+`all_skilllite_env_literals_are_registered` 一致性测试保护，避免后续漂移。
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `SKILLLITE_GOAL_LLM_EXTRACT` | `0` | 设为 `1` 时，正则提取目标边界为空时回退到 LLM 抽取。 |
+| `SKILLLITE_HISTORY_WINDOW_MESSAGES` | `200` | 单次会话内存历史窗口在裁剪前的上限消息条数。 |
+| `SKILLLITE_AGENT_MCP_CLIENT` | `1` | 设为 `0` 关闭 agent 的内置 MCP 客户端 bootstrap（不会自动接入任何 MCP server）。 |
+| `SKILLLITE_MCP_SERVERS_JSON` | (未设) | 内联 JSON 数组形式的 MCP server 列表，桌面侧用来把 MCP 配置传给子进程 CLI。 |
+| `SKILLLITE_TRUST_BYPASS_CONFIRM` | `0` | 设为 `1`/`true` 时跳过 `skilllite execute` 的信任确认提示。 |
+| `SKILLLITE_TRANSCRIPT_FLUSH_MODE` | `hybrid` | Transcript flush 策略：`every`/`interval`/`hybrid`/`always`。 |
+| `SKILLLITE_TRANSCRIPT_FLUSH_EVERY` | (内置) | 每 N 条事件强制 flush（`every` / `hybrid` 模式使用）。 |
+| `SKILLLITE_TRANSCRIPT_FLUSH_INTERVAL_MS` | (内置) | 每 N 毫秒强制 flush（`interval` / `hybrid` 模式使用）。 |
+| `SKILLLITE_SWARM_LLM_ROUTING` | `1` | 设为 `0` 时关闭 `skilllite swarm` 内的 LLM 路由决策，回退到静态规则。 |
+| `SKILLLITE_AUTO_APPROVE_RUNTIME` | `0` | 设为 `1` 时跳过 runtime 依赖下载的交互确认。 |
+| `SKILLLITE_RUNTIME_PYTHON_BASE_URL` | (内置) | 自定义 Python runtime 下载基址（用于镜像加速）。 |
+| `SKILLLITE_RUNTIME_NODE_BASE_URL` | (内置) | 自定义 Node.js runtime 下载基址（用于镜像加速）。 |
+| `SKILLLITE_MAX_PROCESSES` | macOS `512` / 其它 `50` | sandbox 启动器允许的最大子进程数。 |
+| `SKILLLITE_NETWORK_DISABLED` | (sandbox 设) | sandbox 启动器在禁网时为子进程设置为 `1`。 |
+| `SKILLLITE_SANDBOX` | (sandbox 设) | sandbox 启动器为子进程设置为 `1`，内层代码以此判断"是否在 sandbox 内"。 |
+| `SKILLLITE_FUZZY_THRESHOLD` | `0.85` | `apply_replace_*` 模糊匹配相似度阈值。 |
+| `SKILLLITE_MIN_PATTERN_COUNT` | `3`（`--force` 时 `2`） | Skill 合成中模式的最低重复次数门槛。 |
+| `SKILLLITE_SKILL_DEDUP_DESCRIPTION` | `1` | 设为 `0` 时关闭 skill 合成的 description 相似去重。 |
+| `SKILLLITE_EXTERNAL_LEARNING` | `0` | 设为 `1`/`true` 时允许外部（社区）learner 接入。 |
+| `SKILLLITE_EVO_FORCE_PROPOSAL_ID` | (未设) | 进化干跑/调试时强制指定 proposal id。 |
+| `SKILLLITE_ENABLE_MEMORY` | `true` | 对话记忆子系统总开关。 |
+| `SKILLLITE_ENABLE_MEMORY_VECTOR` | `false` | 是否启用 memory 的向量检索后端。 |
+| `SKILLLITE_EMBEDDING_BASE_URL` | (回退到 LLM `API_BASE`) | 可独立设置 embedding API 基址；未设时走主 LLM `API_BASE` 链。 |
+| `SKILLLITE_EMBEDDING_API_KEY` | (回退到 LLM `API_KEY`) | 可独立设置 embedding API key；未设时走主 LLM `API_KEY` 链。 |
+| `SKILLLITE_HEARTBEAT_INTERVAL_SECS` | (桌面默认) | 桌面 life-pulse 心跳间隔（秒）。 |
+| `SKILLLITE_GATEWAY_SERVE_ALLOW` | (桌面设) | 桌面端在拉起 gateway-serve 子命令时设置的内部授权标记。 |
+| `SKILLLITE_CHANNEL_HTTP_ADDR` | (运行时打印) | `skilllite channel-serve` 启动时打印到 stderr 的实际监听地址。 |
+| `SKILLLITE_ARTIFACT_HTTP_ADDR` | (运行时打印) | `skilllite artifact serve` 启动时打印到 stdout 的实际监听地址。 |
+
+长文本摘要相关调优变量（`SKILLLITE_CHUNK_SIZE`、`SKILLLITE_HEAD_CHUNKS`、
+`SKILLLITE_TAIL_CHUNKS`、`SKILLLITE_MAX_OUTPUT_CHARS`、
+`SKILLLITE_MAP_MODEL`、`SKILLLITE_LONG_TEXT_STRATEGY`、
+`SKILLLITE_EXTRACT_TOP_K_RATIO`、`SKILLLITE_SUMMARIZE_THRESHOLD`、
+`SKILLLITE_MAX_TOKENS`、`SKILLLITE_USER_INPUT_MAX_CHARS`、
+`SKILLLITE_TOOL_RESULT_MAX_CHARS`、
+`SKILLLITE_READ_FILE_TOOL_RESULT_MAX_CHARS`、
+`SKILLLITE_TOOL_RESULT_RECOVERY_MAX_CHARS`、
+`SKILLLITE_CONTEXT_SOFT_LIMIT_CHARS`、`SKILLLITE_COMPACTION_THRESHOLD`、
+`SKILLLITE_MEMORY_FLUSH_ENABLED`、`SKILLLITE_MEMORY_FLUSH_THRESHOLD`、
+`SKILLLITE_COMPACTION_KEEP_RECENT`）请参见
+`crates/skilllite-agent/src/types/env_config.rs` 的内联 doc-comment。

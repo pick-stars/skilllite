@@ -567,7 +567,10 @@ pub fn serve_swarm(
         .route("/can-do", get(handle_can_do))
         .with_state(state);
 
-    let llm_routing = std::env::var("SKILLLITE_SWARM_LLM_ROUTING").as_deref() != Ok("0");
+    let llm_routing =
+        std::env::var(skilllite_core::config::env_keys::swarm::SKILLLITE_SWARM_LLM_ROUTING)
+            .as_deref()
+            != Ok("0");
     tracing::info!(
         listen = %bind_addr,
         instance = %instance_name,

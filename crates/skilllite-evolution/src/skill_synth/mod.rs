@@ -99,10 +99,11 @@ pub async fn evolve_skills<L: EvolutionLlm>(
     let mut changes = Vec::new();
 
     let try_generate = generate || force;
-    let min_pattern_count: u32 = std::env::var("SKILLLITE_MIN_PATTERN_COUNT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(if force { 2 } else { 3 });
+    let min_pattern_count: u32 =
+        std::env::var(skilllite_core::config::env_keys::evolution::SKILLLITE_MIN_PATTERN_COUNT)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(if force { 2 } else { 3 });
 
     if try_generate {
         // 单次 conn 预取成功/失败数据并执行 retire，减少 DB 打开次数
@@ -193,10 +194,11 @@ pub(crate) fn decision_ids_read_for_skill_evolution(
     if !try_generate {
         return Ok(Vec::new());
     }
-    let min_pattern_count: u32 = std::env::var("SKILLLITE_MIN_PATTERN_COUNT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(if force { 2 } else { 3 });
+    let min_pattern_count: u32 =
+        std::env::var(skilllite_core::config::env_keys::evolution::SKILLLITE_MIN_PATTERN_COUNT)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(if force { 2 } else { 3 });
     let mut acc: HashSet<i64> = HashSet::new();
     let (_, pattern_descs) = query::query_repeated_patterns(conn, min_pattern_count)?;
     for id in query::query_pattern_execution_ids(conn, &pattern_descs)? {

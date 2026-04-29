@@ -2,7 +2,9 @@
 //!
 //! 从环境变量加载，统一 fallback 逻辑。
 
-use super::env_keys::{agent_loop as al_keys, llm, observability as obv_keys, sandbox as sb_keys};
+use super::env_keys::{
+    agent_loop as al_keys, llm, memory as mem_keys, observability as obv_keys, sandbox as sb_keys,
+};
 use super::loader::{env_bool, env_optional, env_or};
 use std::path::PathBuf;
 
@@ -112,9 +114,13 @@ pub struct AgentFeatureFlags {
 impl AgentFeatureFlags {
     pub fn from_env() -> Self {
         Self {
-            enable_memory: env_bool("SKILLLITE_ENABLE_MEMORY", &[], true),
-            enable_task_planning: env_bool("SKILLLITE_ENABLE_TASK_PLANNING", &[], true),
-            enable_memory_vector: env_bool("SKILLLITE_ENABLE_MEMORY_VECTOR", &[], false),
+            enable_memory: env_bool(mem_keys::SKILLLITE_ENABLE_MEMORY, &[], true),
+            enable_task_planning: env_bool(
+                super::env_keys::SKILLLITE_ENABLE_TASK_PLANNING,
+                &[],
+                true,
+            ),
+            enable_memory_vector: env_bool(mem_keys::SKILLLITE_ENABLE_MEMORY_VECTOR, &[], false),
         }
     }
 }
@@ -163,7 +169,7 @@ impl EmbeddingConfig {
         super::loader::load_dotenv();
         // 支持独立的 embedding API 配置
         let api_base = super::loader::env_or(
-            "SKILLLITE_EMBEDDING_BASE_URL",
+            mem_keys::SKILLLITE_EMBEDDING_BASE_URL,
             &["EMBEDDING_BASE_URL"],
             || {
                 super::loader::env_or(llm::API_BASE, llm::API_BASE_ALIASES, || {
@@ -172,16 +178,17 @@ impl EmbeddingConfig {
             },
         );
         let api_key = super::loader::env_or(
-            "SKILLLITE_EMBEDDING_API_KEY",
+            mem_keys::SKILLLITE_EMBEDDING_API_KEY,
             &["EMBEDDING_API_KEY"],
             || super::loader::env_or(llm::API_KEY, llm::API_KEY_ALIASES, || "".to_string()),
         );
         let (default_model, default_dim) = Self::default_for_base(&api_base);
-        let model =
-            super::loader::env_or("SKILLLITE_EMBEDDING_MODEL", &["EMBEDDING_MODEL"], || {
-                default_model.to_string()
-            });
-        let dimension = super::loader::env_optional("SKILLLITE_EMBEDDING_DIMENSION", &[])
+        let model = super::loader::env_or(
+            mem_keys::SKILLLITE_EMBEDDING_MODEL,
+            &["EMBEDDING_MODEL"],
+            || default_model.to_string(),
+        );
+        let dimension = super::loader::env_optional(mem_keys::SKILLLITE_EMBEDDING_DIMENSION, &[])
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(default_dim);
         Self {

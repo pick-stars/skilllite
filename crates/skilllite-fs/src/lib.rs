@@ -8,6 +8,7 @@
 //! - backup: backup_file, prune_oldest_files
 //! - util: is_likely_binary, matches_glob
 
+pub mod env_keys;
 pub mod error;
 
 mod backup;

@@ -20,8 +20,8 @@ fn is_evolution_runtime_env_key(k: &str) -> bool {
     use skilllite_core::config::env_keys::evolution as evo;
     k == evo::SKILLLITE_EVOLUTION
         || k == evo::SKILLLITE_MAX_EVOLUTIONS_PER_DAY
-        || k.starts_with("SKILLLITE_EVO")
-        || k.starts_with("SKILLLITE_EVOLUTION_")
+        || k.starts_with("SKILLLITE_EVO") // SKIP-ENV-AUDIT: prefix-match, not a single var
+        || k.starts_with("SKILLLITE_EVOLUTION_") // SKIP-ENV-AUDIT: prefix-match, not a single var
 }
 
 /// 将合并后的子进程环境变量中、与进化运行时相关的键同步到当前进程，供 `run_evolution` 内 `from_env()` 读取。
@@ -530,7 +530,10 @@ pub fn authorize_capability_evolution(
         }
         // Must force this backlog row: generic `evolution run` only considers Passive/Active
         // proposals from build_evolution_proposals, not queued user-authorized capability rows.
-        cmd.env("SKILLLITE_EVO_FORCE_PROPOSAL_ID", &proposal_id_owned);
+        cmd.env(
+            skilllite_core::config::env_keys::evolution::SKILLLITE_EVO_FORCE_PROPOSAL_ID,
+            &proposal_id_owned,
+        );
         let output = cmd.output();
         let status_note = match output {
             Ok(out) => {
@@ -675,26 +678,25 @@ pub fn trigger_evolution_run(
         None
     }
 
+    use skilllite_core::config::env_keys::llm as llm_keys;
     let env_map: std::collections::HashMap<String, String> =
         load_dotenv_for_child(workspace).into_iter().collect();
-    let mut api_base = env_first_non_empty(
-        &env_map,
-        &[
-            "SKILLLITE_API_BASE",
-            "OPENAI_API_BASE",
-            "OPENAI_BASE_URL",
-            "BASE_URL",
-        ],
-    )
-    .or_else(|| skilllite_core::config::LlmConfig::try_from_env().map(|c| c.api_base))
-    .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
-    let mut api_key = env_first_non_empty(
-        &env_map,
-        &["SKILLLITE_API_KEY", "OPENAI_API_KEY", "API_KEY"],
-    )
-    .or_else(|| skilllite_core::config::LlmConfig::try_from_env().map(|c| c.api_key))
-    .unwrap_or_default();
-    let mut model = env_first_non_empty(&env_map, &["SKILLLITE_MODEL", "OPENAI_MODEL", "MODEL"])
+    let api_base_keys: Vec<&str> = std::iter::once(llm_keys::API_BASE)
+        .chain(llm_keys::API_BASE_ALIASES.iter().copied())
+        .collect();
+    let api_key_keys: Vec<&str> = std::iter::once(llm_keys::API_KEY)
+        .chain(llm_keys::API_KEY_ALIASES.iter().copied())
+        .collect();
+    let model_keys: Vec<&str> = std::iter::once(llm_keys::MODEL)
+        .chain(llm_keys::MODEL_ALIASES.iter().copied())
+        .collect();
+    let mut api_base = env_first_non_empty(&env_map, &api_base_keys)
+        .or_else(|| skilllite_core::config::LlmConfig::try_from_env().map(|c| c.api_base))
+        .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
+    let mut api_key = env_first_non_empty(&env_map, &api_key_keys)
+        .or_else(|| skilllite_core::config::LlmConfig::try_from_env().map(|c| c.api_key))
+        .unwrap_or_default();
+    let mut model = env_first_non_empty(&env_map, &model_keys)
         .or_else(|| skilllite_core::config::LlmConfig::try_from_env().map(|c| c.model))
         .unwrap_or_else(|| "gpt-4o".to_string());
 
@@ -735,10 +737,11 @@ pub fn trigger_evolution_run(
     let adapter = skilllite_agent::evolution::EvolutionLlmAdapter { llm: &llm };
     let skills_root = existing_workspace_skills_root(workspace);
 
-    let prev_force = std::env::var("SKILLLITE_EVO_FORCE_PROPOSAL_ID").ok();
+    let force_key = skilllite_core::config::env_keys::evolution::SKILLLITE_EVO_FORCE_PROPOSAL_ID;
+    let prev_force = std::env::var(force_key).ok();
     match proposal_id {
-        Some(pid) => std::env::set_var("SKILLLITE_EVO_FORCE_PROPOSAL_ID", pid),
-        None => std::env::remove_var("SKILLLITE_EVO_FORCE_PROPOSAL_ID"),
+        Some(pid) => std::env::set_var(force_key, pid),
+        None => std::env::remove_var(force_key),
     }
     let run_result = tokio::runtime::Runtime::new()
         .map_err(|e| format!("执行 evolution run 失败: runtime 初始化失败: {}", e))?
@@ -752,8 +755,8 @@ pub fn trigger_evolution_run(
             true,
         ));
     match prev_force {
-        Some(v) => std::env::set_var("SKILLLITE_EVO_FORCE_PROPOSAL_ID", v),
-        None => std::env::remove_var("SKILLLITE_EVO_FORCE_PROPOSAL_ID"),
+        Some(v) => std::env::set_var(force_key, v),
+        None => std::env::remove_var(force_key),
     }
 
     let response = match run_result {

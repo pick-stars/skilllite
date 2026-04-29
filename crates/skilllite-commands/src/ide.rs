@@ -324,8 +324,8 @@ pub fn cmd_cursor(
         "command": cmd_executable,
         "args": cmd_args,
         "env": {
-            "SKILLLITE_SANDBOX_LEVEL": "3",
-            "SKILLLITE_SKILLS_DIR": skills_dir_for_config
+            skilllite_core::config::env_keys::sandbox::SKILLLITE_SANDBOX_LEVEL: "3",
+            skilllite_core::config::env_keys::paths::SKILLLITE_SKILLS_DIR: skills_dir_for_config
         }
     });
 
@@ -438,8 +438,8 @@ pub fn cmd_opencode(project_dir: Option<&str>, skills_dir: &str, force: bool) ->
         "type": "local",
         "command": command,
         "environment": {
-            "SKILLLITE_SANDBOX_LEVEL": "3",
-            "SKILLLITE_SKILLS_DIR": effective_skills_dir
+            skilllite_core::config::env_keys::sandbox::SKILLLITE_SANDBOX_LEVEL: "3",
+            skilllite_core::config::env_keys::paths::SKILLLITE_SKILLS_DIR: effective_skills_dir
         },
         "enabled": true
     });

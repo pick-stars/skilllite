@@ -51,11 +51,12 @@ const EXTERNAL_KNOWLEDGE_PROMPT: &str =
 /// Check whether external learning is enabled and under the daily cap.
 pub fn should_run_external_learning(conn: &Connection) -> bool {
     // Env guard (opt-in)
-    let enabled = std::env::var("SKILLLITE_EXTERNAL_LEARNING")
-        .ok()
-        .as_deref()
-        .map(|v| v == "1" || v == "true")
-        .unwrap_or(false);
+    let enabled =
+        std::env::var(skilllite_core::config::env_keys::evolution::SKILLLITE_EXTERNAL_LEARNING)
+            .ok()
+            .as_deref()
+            .map(|v| v == "1" || v == "true")
+            .unwrap_or(false);
     if !enabled {
         return false;
     }

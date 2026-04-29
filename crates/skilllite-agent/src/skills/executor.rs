@@ -312,9 +312,15 @@ fn execute_bash_in_skill(
     // can use $SKILLLITE_OUTPUT_DIR/filename to produce absolute paths.
     // This is critical because some tools (e.g. agent-browser) ignore shell cwd
     // and resolve file paths relative to their own process directory.
-    cmd.env("SKILLLITE_WORKSPACE", workspace.as_os_str());
+    cmd.env(
+        skilllite_core::config::env_keys::paths::SKILLLITE_WORKSPACE,
+        workspace.as_os_str(),
+    );
     if let Some(ref output_dir) = skilllite_core::config::PathsConfig::from_env().output_dir {
-        cmd.env("SKILLLITE_OUTPUT_DIR", output_dir);
+        cmd.env(
+            skilllite_core::config::env_keys::paths::SKILLLITE_OUTPUT_DIR,
+            output_dir,
+        );
     }
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::piped());

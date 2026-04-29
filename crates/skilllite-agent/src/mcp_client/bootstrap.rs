@@ -31,7 +31,11 @@ impl McpBootstrap {
 
 /// Connect enabled MCP servers, run `tools/list`, register prefixed tools.
 pub async fn bootstrap_mcp(config: &AgentConfig) -> McpBootstrap {
-    if std::env::var("SKILLLITE_AGENT_MCP_CLIENT").ok().as_deref() == Some("0") {
+    if std::env::var(skilllite_core::config::env_keys::mcp::SKILLLITE_AGENT_MCP_CLIENT)
+        .ok()
+        .as_deref()
+        == Some("0")
+    {
         return McpBootstrap::empty();
     }
 

@@ -174,11 +174,16 @@ fn parse_u64_env(name: &str, default: u64, min: u64) -> u64 {
 }
 
 fn transcript_flush_policy() -> FlushPolicy {
+    use skilllite_core::config::env_keys::executor as exe_keys;
     let default = FlushPolicy::default();
-    let mode = parse_flush_mode(env::var("SKILLLITE_TRANSCRIPT_FLUSH_MODE").ok().as_deref());
-    let every = parse_u64_env("SKILLLITE_TRANSCRIPT_FLUSH_EVERY", default.every, 1);
+    let mode = parse_flush_mode(
+        env::var(exe_keys::SKILLLITE_TRANSCRIPT_FLUSH_MODE)
+            .ok()
+            .as_deref(),
+    );
+    let every = parse_u64_env(exe_keys::SKILLLITE_TRANSCRIPT_FLUSH_EVERY, default.every, 1);
     let interval_ms = parse_u64_env(
-        "SKILLLITE_TRANSCRIPT_FLUSH_INTERVAL_MS",
+        exe_keys::SKILLLITE_TRANSCRIPT_FLUSH_INTERVAL_MS,
         default.interval.as_millis() as u64,
         0,
     );

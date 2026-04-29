@@ -92,7 +92,7 @@ pub type RuntimeConfirmDownloadFn = Option<Box<dyn Fn(&RuntimeDownloadRequest) -
 /// If `SKILLLITE_AUTO_APPROVE_RUNTIME=1` is set, auto-approves without prompting.
 pub fn cli_confirm_download() -> RuntimeConfirmDownloadFn {
     Some(Box::new(|req: &RuntimeDownloadRequest| -> bool {
-        if std::env::var("SKILLLITE_AUTO_APPROVE_RUNTIME")
+        if std::env::var(skilllite_core::config::env_keys::sandbox::SKILLLITE_AUTO_APPROVE_RUNTIME)
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
             .unwrap_or(false)
         {
@@ -144,10 +144,12 @@ const NODE_VERSION: &str = "20.18.0";
 /// Env key: override Python release download base (e.g. mirror for mainland).
 /// Full URL = {base}/{tag}/{archive_name}. No trailing slash.
 #[cfg(feature = "runtime-deps")]
-const ENV_PYTHON_BASE_URL: &str = "SKILLLITE_RUNTIME_PYTHON_BASE_URL";
+const ENV_PYTHON_BASE_URL: &str =
+    skilllite_core::config::env_keys::sandbox::SKILLLITE_RUNTIME_PYTHON_BASE_URL;
 /// Env key: override Node dist base (e.g. npmmirror). URL = {base}/v{version}/{file}.
 #[cfg(feature = "runtime-deps")]
-const ENV_NODE_BASE_URL: &str = "SKILLLITE_RUNTIME_NODE_BASE_URL";
+const ENV_NODE_BASE_URL: &str =
+    skilllite_core::config::env_keys::sandbox::SKILLLITE_RUNTIME_NODE_BASE_URL;
 
 #[cfg(feature = "runtime-deps")]
 const DEFAULT_PYTHON_BASE: &str =

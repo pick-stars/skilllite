@@ -266,8 +266,12 @@ fn execute_with_bwrap(
     }
 
     // Set environment
-    cmd.args(["--setenv", "SKILLLITE_SANDBOX", "1"])
-        .args(["--setenv", "SKILLBOX_SANDBOX", "1"]); // legacy compat
+    cmd.args([
+        "--setenv",
+        skilllite_core::config::env_keys::paths::SKILLLITE_SANDBOX,
+        "1",
+    ])
+    .args(["--setenv", "SKILLBOX_SANDBOX", "1"]); // legacy compat
     cmd.args(["--setenv", "TMPDIR", "/tmp"]);
     cmd.args(["--setenv", "HOME", "/tmp"]);
 

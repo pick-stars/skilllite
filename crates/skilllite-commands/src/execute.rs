@@ -176,10 +176,17 @@ pub fn exec_script(
         .lock()
         .map_err(|e| crate::Error::validation(format!("Mutex poisoned: {}", e)))?;
     let _args_guard = if let Some(args_str) = args {
-        skilllite_core::config::set_env_var("SKILLLITE_SCRIPT_ARGS", args_str);
-        Some(ScopedEnvGuard("SKILLLITE_SCRIPT_ARGS"))
+        skilllite_core::config::set_env_var(
+            skilllite_core::config::env_keys::sandbox::SKILLLITE_SCRIPT_ARGS,
+            args_str,
+        );
+        Some(ScopedEnvGuard(
+            skilllite_core::config::env_keys::sandbox::SKILLLITE_SCRIPT_ARGS,
+        ))
     } else {
-        skilllite_core::config::remove_env_var("SKILLLITE_SCRIPT_ARGS");
+        skilllite_core::config::remove_env_var(
+            skilllite_core::config::env_keys::sandbox::SKILLLITE_SCRIPT_ARGS,
+        );
         None
     };
 
@@ -442,14 +449,17 @@ Reinstall from trusted source or verify integrity."
                 )
             }
             TrustDecision::RequireConfirm => {
-                let bypass = std::env::var("SKILLLITE_TRUST_BYPASS_CONFIRM")
-                    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-                    .unwrap_or(false);
+                let bypass = std::env::var(
+                    skilllite_core::config::env_keys::commands::SKILLLITE_TRUST_BYPASS_CONFIRM,
+                )
+                .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                .unwrap_or(false);
                 if !bypass {
                     bail!(
                         "Execution blocked: Skill requires confirmation (trust tier: {:?}). \
-Set SKILLLITE_TRUST_BYPASS_CONFIRM=1 to run, or use --confirm in MCP.",
-                        report.trust_tier
+Set {}=1 to run, or use --confirm in MCP.",
+                        report.trust_tier,
+                        skilllite_core::config::env_keys::commands::SKILLLITE_TRUST_BYPASS_CONFIRM
                     )
                 }
             }

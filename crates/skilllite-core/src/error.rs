@@ -57,8 +57,8 @@ impl Error {
 /// Kept as a separate type so callers can match on variants directly.
 #[derive(Debug, Error)]
 pub enum PathValidationError {
-    /// The configured SKILLLITE_SKILLS_ROOT (or cwd) could not be resolved.
-    #[error("Invalid SKILLLITE_SKILLS_ROOT: {0}")]
+    /// The configured SKILLLITE_SKILLS_DIR (or cwd) could not be resolved.
+    #[error("Invalid SKILLLITE_SKILLS_DIR: {0}")]
     InvalidRoot(#[from] std::io::Error),
 
     /// Path does not exist.

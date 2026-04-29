@@ -328,7 +328,7 @@ fn fuzzy_find(content: &str, old_string: &str) -> Option<FuzzyMatch> {
     fuzzy_find_whitespace(content, old_string)
         .or_else(|| fuzzy_find_blank_lines(content, old_string))
         .or_else(|| {
-            let threshold = std::env::var("SKILLLITE_FUZZY_THRESHOLD")
+            let threshold = std::env::var(crate::env_keys::SKILLLITE_FUZZY_THRESHOLD)
                 .ok()
                 .and_then(|v| v.parse::<f64>().ok())
                 .unwrap_or(FUZZY_THRESHOLD);

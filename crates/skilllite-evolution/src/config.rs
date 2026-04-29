@@ -16,7 +16,7 @@ pub enum EvolutionMode {
 
 impl EvolutionMode {
     pub fn from_env() -> Self {
-        match std::env::var("SKILLLITE_EVOLUTION").ok().as_deref() {
+        match std::env::var(evo_keys::SKILLLITE_EVOLUTION).ok().as_deref() {
             None | Some("1") | Some("true") | Some("") => Self::All,
             Some("0") | Some("false") => Self::Disabled,
             Some("prompts") => Self::PromptsOnly,
@@ -24,7 +24,8 @@ impl EvolutionMode {
             Some("skills") => Self::SkillsOnly,
             Some(other) => {
                 tracing::warn!(
-                    "Unknown SKILLLITE_EVOLUTION value '{}', defaulting to all",
+                    "Unknown {} value '{}', defaulting to all",
+                    evo_keys::SKILLLITE_EVOLUTION,
                     other
                 );
                 Self::All

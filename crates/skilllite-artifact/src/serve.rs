@@ -12,12 +12,13 @@ use crate::{artifact_router, ArtifactHttpServerConfig, ArtifactHttpState, LocalD
 
 /// When set to `1`, refuse to start [`run_artifact_http_server`] without a non-empty bearer token
 /// (even on loopback). Defense-in-depth for shared machines or accidental exposure.
-pub const ARTIFACT_HTTP_REQUIRE_AUTH_ENV: &str = "SKILLLITE_ARTIFACT_HTTP_REQUIRE_AUTH";
+pub const ARTIFACT_HTTP_REQUIRE_AUTH_ENV: &str =
+    skilllite_core::config::env_keys::artifact::SKILLLITE_ARTIFACT_HTTP_REQUIRE_AUTH;
 
 /// When set to `1`, allow binding on a **non-loopback** address without bearer authentication.
 /// Default is **refuse** (misconfiguration guard). Strongly discouraged outside controlled lab setups.
 pub const ARTIFACT_HTTP_ALLOW_INSECURE_NO_AUTH_ENV: &str =
-    "SKILLLITE_ARTIFACT_HTTP_ALLOW_INSECURE_NO_AUTH";
+    skilllite_core::config::env_keys::artifact::SKILLLITE_ARTIFACT_HTTP_ALLOW_INSECURE_NO_AUTH;
 
 fn normalize_bearer_token(token: Option<String>) -> Option<String> {
     token.and_then(|s| {
@@ -113,7 +114,11 @@ pub async fn run_artifact_http_server(
     let app = artifact_router(state);
     let listener = tokio::net::TcpListener::bind(bind).await?;
     let local = listener.local_addr()?;
-    println!("SKILLLITE_ARTIFACT_HTTP_ADDR={}", local);
+    println!(
+        "{}={}",
+        skilllite_core::config::env_keys::artifact::SKILLLITE_ARTIFACT_HTTP_ADDR,
+        local
+    );
     std::io::stdout().flush()?;
     axum::serve(listener, app).await?;
     Ok(())

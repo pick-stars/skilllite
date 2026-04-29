@@ -658,7 +658,9 @@ pub(super) async fn extract_goal_boundaries_hybrid(
     if !regex_result.is_empty() {
         return Ok(regex_result);
     }
-    if std::env::var("SKILLLITE_GOAL_LLM_EXTRACT").as_deref() == Ok("1") {
+    if std::env::var(skilllite_core::config::env_keys::goal::SKILLLITE_GOAL_LLM_EXTRACT).as_deref()
+        == Ok("1")
+    {
         tracing::info!("Goal boundaries regex empty, trying LLM extraction");
         extract_goal_boundaries_llm(client, model, goal, usage_totals).await
     } else {

@@ -85,7 +85,9 @@ fn build_desktop_skill_info(
             .map(|entry| trust_tier_label(entry.trust_tier.clone()))
             .unwrap_or_else(|| "unknown".to_string()),
         trust_score: manifest_entry.as_ref().map(|entry| entry.trust_score),
-        admission_risk: manifest_entry.as_ref().and_then(|entry| entry.admission_risk.clone()),
+        admission_risk: manifest_entry
+            .as_ref()
+            .and_then(|entry| entry.admission_risk.clone()),
         dependency_type: dependency_type_label(dependency.as_ref().map(|dep| &dep.dep_type)),
         dependency_packages: dependency
             .as_ref()
@@ -103,7 +105,10 @@ fn manifest_entry_for_skill(
 ) -> Option<manifest::SkillManifestEntry> {
     let parent = skill_path.parent()?.to_path_buf();
     if !manifest_cache.contains_key(&parent) {
-        manifest_cache.insert(parent.clone(), manifest::load_manifest(&parent).unwrap_or_default());
+        manifest_cache.insert(
+            parent.clone(),
+            manifest::load_manifest(&parent).unwrap_or_default(),
+        );
     }
     let skill_key = skill_path.file_name()?.to_str()?;
     manifest_cache
@@ -316,7 +321,10 @@ pub fn repair_skills(
     }
     cmd.arg("--from-source");
     cmd.current_dir(&root)
-        .env("SKILLLITE_WORKSPACE", root.to_string_lossy().as_ref())
+        .env(
+            skilllite_core::config::env_keys::paths::SKILLLITE_WORKSPACE,
+            root.to_string_lossy().as_ref(),
+        )
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
@@ -365,7 +373,10 @@ pub fn add_skill(
         cmd.arg("--force");
     }
     cmd.current_dir(&root)
-        .env("SKILLLITE_WORKSPACE", root.to_string_lossy().as_ref())
+        .env(
+            skilllite_core::config::env_keys::paths::SKILLLITE_WORKSPACE,
+            root.to_string_lossy().as_ref(),
+        )
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
@@ -475,7 +486,10 @@ fn build_setup_hints(all_skills: &[DesktopSkillInfo], added_skill_names: &[Strin
             missing.push(format!("需要至少一个命令 {}", group.join(" / ")));
         }
         if !skill.missing_env_vars.is_empty() {
-            missing.push(format!("缺少环境变量 {}", skill.missing_env_vars.join(", ")));
+            missing.push(format!(
+                "缺少环境变量 {}",
+                skill.missing_env_vars.join(", ")
+            ));
         }
         if !missing.is_empty() {
             lines.push(format!("- {}：{}", skill.name, missing.join("；")));

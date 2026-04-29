@@ -75,10 +75,11 @@ async fn run_evolution_inner<L: EvolutionLlm>(
     force: bool,
 ) -> Result<EvolutionRunResult> {
     let conn = feedback::open_evolution_db(chat_root)?;
-    let forced_proposal_id = std::env::var("SKILLLITE_EVO_FORCE_PROPOSAL_ID")
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty());
+    let forced_proposal_id =
+        std::env::var(skilllite_core::config::env_keys::evolution::SKILLLITE_EVO_FORCE_PROPOSAL_ID)
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
     let decision = if let Some(pid) = forced_proposal_id.as_deref() {
         match load_backlog_proposal_by_id(&conn, pid)? {
             Some(p) => {

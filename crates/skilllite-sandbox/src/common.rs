@@ -56,7 +56,7 @@ pub const DEFAULT_MAX_PROCESSES: u64 = 50;
 
 /// Read the effective max-processes limit, honoring env override.
 pub fn effective_max_processes() -> u64 {
-    std::env::var("SKILLLITE_MAX_PROCESSES")
+    std::env::var(skilllite_core::config::env_keys::sandbox::SKILLLITE_MAX_PROCESSES)
         .ok()
         .and_then(|v| v.parse::<u64>().ok())
         .unwrap_or(DEFAULT_MAX_PROCESSES)
@@ -659,8 +659,9 @@ pub fn apply_standard_execution_env(
     network_enabled: bool,
     include_output_dir: bool,
 ) {
+    use skilllite_core::config::env_keys::paths as path_keys;
     let sandbox_flag = if sandbox_enabled { "1" } else { "0" };
-    cmd.env("SKILLLITE_SANDBOX", sandbox_flag);
+    cmd.env(path_keys::SKILLLITE_SANDBOX, sandbox_flag);
     cmd.env("SKILLBOX_SANDBOX", sandbox_flag); // legacy compat
     cmd.env("TMPDIR", tmp_dir);
 
@@ -672,12 +673,12 @@ pub fn apply_standard_execution_env(
 
     if include_output_dir {
         if let Some(ref output_dir) = skilllite_core::config::PathsConfig::from_env().output_dir {
-            cmd.env("SKILLLITE_OUTPUT_DIR", output_dir);
+            cmd.env(path_keys::SKILLLITE_OUTPUT_DIR, output_dir);
         }
     }
 
     if !network_enabled {
-        cmd.env("SKILLLITE_NETWORK_DISABLED", "1");
+        cmd.env(path_keys::SKILLLITE_NETWORK_DISABLED, "1");
         cmd.env("SKILLBOX_NETWORK_DISABLED", "1"); // legacy compat
     }
 }

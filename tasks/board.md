@@ -1,6 +1,6 @@
 # Task Board
 
-Last updated: 2026-04-29 (TASK-2026-063 extension tool metadata dispatch done)
+Last updated: 2026-04-29 (TASK-2026-064 env-keys single-source done)
 
 ## In Progress
 
@@ -16,6 +16,7 @@ Last updated: 2026-04-29 (TASK-2026-063 extension tool metadata dispatch done)
 
 ## Done
 
+- `TASK-2026-064-env-keys-single-source` - Status: `done` - Owner: `agent`
 - `TASK-2026-063-extension-tool-metadata-dispatch` - Status: `done` - Owner: `agent`
 - `TASK-2026-062-wiki-lesson-optimization-template` - Status: `done` - Owner: `agent`
 - `TASK-2026-061-conversation-wiki-suggestion` - Status: `done` - Owner: `agent`

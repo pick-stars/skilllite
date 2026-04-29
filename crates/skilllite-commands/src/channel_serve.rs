@@ -17,9 +17,10 @@ use serde_json::json;
 use tower_http::trace::TraceLayer;
 
 use crate::error::{bail, Error, Result};
+use skilllite_core::config::env_keys::channel as channel_keys;
 
 /// Env var that must equal `1` before `channel serve` will bind (CLI only).
-pub const CHANNEL_SERVE_ALLOW_ENV: &str = "SKILLLITE_CHANNEL_SERVE_ALLOW";
+pub const CHANNEL_SERVE_ALLOW_ENV: &str = channel_keys::SKILLLITE_CHANNEL_SERVE_ALLOW;
 
 #[derive(Clone)]
 struct AppState {
@@ -40,7 +41,7 @@ pub async fn run_channel_http_server(addr: SocketAddr, bearer: Option<String>) -
     let local = listener
         .local_addr()
         .map_err(|e| Error::validation(e.to_string()))?;
-    eprintln!("SKILLLITE_CHANNEL_HTTP_ADDR={local}");
+    eprintln!("{}={local}", channel_keys::SKILLLITE_CHANNEL_HTTP_ADDR);
     eprintln!(
         "channel serve: GET /health  POST /webhook/inbound  (set {}=1 to allow bind)",
         CHANNEL_SERVE_ALLOW_ENV
@@ -68,12 +69,13 @@ pub fn cmd_channel_serve(bind: &str, token: Option<&str>) -> Result<()> {
         .map_err(|e| Error::validation(format!("invalid --bind {bind:?}: {e}")))?;
 
     if !addr.ip().is_loopback() && token.map(str::is_empty).unwrap_or(true) {
-        let insecure = std::env::var("SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH")
+        let insecure = std::env::var(channel_keys::SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH)
             .map(|v| v.trim() == "1")
             .unwrap_or(false);
         if !insecure {
             bail!(
-                "non-loopback --bind requires --token or set SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH=1 (unsafe)"
+                "non-loopback --bind requires --token or set {}=1 (unsafe)",
+                channel_keys::SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH
             );
         }
     }
@@ -147,11 +149,11 @@ fn safe_preview_body(body: &Bytes) -> String {
 }
 
 async fn maybe_notify_dingtalk(preview: &str) {
-    let url = match std::env::var("SKILLLITE_CHANNEL_DINGTALK_WEBHOOK") {
+    let url = match std::env::var(channel_keys::SKILLLITE_CHANNEL_DINGTALK_WEBHOOK) {
         Ok(s) if !s.trim().is_empty() => s,
         _ => return,
     };
-    let secret = std::env::var("SKILLLITE_CHANNEL_DINGTALK_SECRET").ok();
+    let secret = std::env::var(channel_keys::SKILLLITE_CHANNEL_DINGTALK_SECRET).ok();
     let preview = preview.to_string();
     let res = tokio::task::spawn_blocking(move || {
         let robot = skilllite_channel::DingTalkRobot::new(url, secret)?;
