@@ -4,7 +4,7 @@
 //! |--------|------|
 //! | [`skill_rpc`] | `skilllite` CLI 与技能目录发现（非 agent-rpc 行协议） |
 //! | [`prompt_artifact`] | `chat_root/prompts` / `_versions` 白名单与读写；契约单测与 [`super::protocol`] 同级策略 |
-//! | [`evolution_ui`] | 进化状态、待审核技能、Backlog、进程内/子进程触发 |
+//! | [`evolution_ui`] | 进化状态、待审核技能、Backlog、进程内/子进程触发（`evolution_ui/` 子模块） |
 //! | [`desktop_services`] | 引导体检、运行时预取、Ollama、`schedule.json` |
 
 mod desktop_services;

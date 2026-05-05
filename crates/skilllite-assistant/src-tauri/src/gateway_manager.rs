@@ -23,8 +23,16 @@ struct GatewayRuntime {
     recent_logs: VecDeque<String>,
 }
 
-#[derive(Default, Clone)]
-pub struct GatewayProcessState(pub Arc<Mutex<GatewayRuntime>>);
+/// Managed gateway child + bind state. Inner `GatewayRuntime` is private so the tuple field is not
+/// `pub` (avoids exposing a private type through a public struct field; see `private_interfaces` lint).
+#[derive(Clone)]
+pub struct GatewayProcessState(Arc<Mutex<GatewayRuntime>>);
+
+impl Default for GatewayProcessState {
+    fn default() -> Self {
+        Self(Arc::new(Mutex::new(GatewayRuntime::default())))
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
