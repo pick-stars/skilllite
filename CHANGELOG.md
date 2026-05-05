@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.29] - 2026-05-05
+
+### Release
+
+- Workspace, Python SDK, and SkillLite Assistant (Tauri) bumped to **0.1.29** to align with git tag **v0.1.29**.
+
+---
+
 ## [0.1.28] - 2026-04-23
 
 ### Release
@@ -384,7 +392,8 @@ Versions 0.1.1–0.1.7 were not tagged; 0.1.8 is the next release after 0.1.0.
 
 ## Links
 
-[Unreleased]: https://github.com/EXboys/skilllite/compare/v0.1.28...HEAD
+[Unreleased]: https://github.com/EXboys/skilllite/compare/v0.1.29...HEAD
+[0.1.29]: https://github.com/EXboys/skilllite/releases/tag/v0.1.29
 [0.1.28]: https://github.com/EXboys/skilllite/releases/tag/v0.1.28
 [0.1.27]: https://github.com/EXboys/skilllite/releases/tag/v0.1.27
 [0.1.26]: https://github.com/EXboys/skilllite/releases/tag/v0.1.26
