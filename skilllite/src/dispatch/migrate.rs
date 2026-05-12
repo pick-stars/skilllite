@@ -2,34 +2,10 @@
 
 use crate::cli::{ClawAction, Commands, MigrateSource};
 use crate::command_registry::CommandRegistry;
+use skilllite_commands::migrate::{cmd_claw_migrate_openclaw, OpenclawMigrateOptions};
 
-fn run_openclaw_migrate(
-    workspace: &str,
-    openclaw_dir: Option<&str>,
-    skills_dir: &str,
-    skill_conflict: &str,
-    dry_run: bool,
-    force: bool,
-    scan_offline: bool,
-    migrate_secrets: bool,
-    no_backup: bool,
-    yes: bool,
-    overwrite: bool,
-) -> crate::Result<()> {
-    skilllite_commands::migrate::cmd_claw_migrate_openclaw(
-        workspace,
-        openclaw_dir,
-        skills_dir,
-        skill_conflict,
-        dry_run,
-        force,
-        scan_offline,
-        migrate_secrets,
-        no_backup,
-        yes,
-        overwrite,
-    )
-    .map_err(Into::into)
+fn run_openclaw_migrate(opts: OpenclawMigrateOptions<'_>) -> crate::Result<()> {
+    cmd_claw_migrate_openclaw(opts).map_err(Into::into)
 }
 
 pub fn register(reg: &mut CommandRegistry) {
@@ -48,19 +24,19 @@ pub fn register(reg: &mut CommandRegistry) {
                     no_backup,
                     yes,
                     overwrite,
-                } => Some(run_openclaw_migrate(
+                } => Some(run_openclaw_migrate(OpenclawMigrateOptions {
                     workspace,
-                    openclaw_dir.as_deref(),
+                    openclaw_dir: openclaw_dir.as_deref(),
                     skills_dir,
                     skill_conflict,
-                    *dry_run,
-                    *force,
-                    *scan_offline,
-                    *migrate_secrets,
-                    *no_backup,
-                    *yes,
-                    *overwrite,
-                )),
+                    dry_run: *dry_run,
+                    force: *force,
+                    scan_offline: *scan_offline,
+                    migrate_secrets: *migrate_secrets,
+                    no_backup: *no_backup,
+                    yes: *yes,
+                    overwrite: *overwrite,
+                })),
             }
         } else {
             None
@@ -82,19 +58,19 @@ pub fn register(reg: &mut CommandRegistry) {
                     no_backup,
                     yes,
                     overwrite,
-                } => Some(run_openclaw_migrate(
+                } => Some(run_openclaw_migrate(OpenclawMigrateOptions {
                     workspace,
-                    openclaw_dir.as_deref(),
+                    openclaw_dir: openclaw_dir.as_deref(),
                     skills_dir,
                     skill_conflict,
-                    *dry_run,
-                    *force,
-                    *scan_offline,
-                    *migrate_secrets,
-                    *no_backup,
-                    *yes,
-                    *overwrite,
-                )),
+                    dry_run: *dry_run,
+                    force: *force,
+                    scan_offline: *scan_offline,
+                    migrate_secrets: *migrate_secrets,
+                    no_backup: *no_backup,
+                    yes: *yes,
+                    overwrite: *overwrite,
+                })),
             }
         } else {
             None

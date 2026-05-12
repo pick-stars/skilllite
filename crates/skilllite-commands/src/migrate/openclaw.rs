@@ -41,7 +41,7 @@ const SECRET_ENV_ALLOWLIST: &[&str] = &[
     "SKILLLITE_MODEL",
 ];
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 enum PlanAction {
     Copy,
@@ -50,6 +50,7 @@ enum PlanAction {
     ArchiveOnly,
     EnvMerge,
     ImportSkills,
+    ReindexMemory,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -73,19 +74,49 @@ struct MigrationReport {
     archived: Vec<String>,
 }
 
-pub fn cmd_claw_migrate_openclaw(
-    workspace: &str,
-    openclaw_dir: Option<&str>,
-    skills_dir: &str,
-    skill_conflict: &str,
+/// CLI options for OpenClaw → SkillLite migration.
+#[derive(Debug, Clone)]
+pub struct OpenclawMigrateOptions<'a> {
+    pub workspace: &'a str,
+    pub openclaw_dir: Option<&'a str>,
+    pub skills_dir: &'a str,
+    pub skill_conflict: &'a str,
+    pub dry_run: bool,
+    pub force: bool,
+    pub scan_offline: bool,
+    pub migrate_secrets: bool,
+    pub no_backup: bool,
+    pub yes: bool,
+    pub overwrite: bool,
+}
+
+struct MigrationPlanDisplay<'a> {
+    project_root: &'a Path,
+    openclaw_home: &'a Path,
+    skills_path: &'a Path,
+    report_dir: &'a Path,
+    items: &'a [PlanItem],
+    skipped: &'a [String],
+    archived: &'a [String],
     dry_run: bool,
-    force: bool,
-    scan_offline: bool,
     migrate_secrets: bool,
-    no_backup: bool,
-    yes: bool,
-    overwrite: bool,
-) -> Result<()> {
+}
+
+pub fn cmd_claw_migrate_openclaw(opts: OpenclawMigrateOptions<'_>) -> Result<()> {
+    let OpenclawMigrateOptions {
+        workspace,
+        openclaw_dir,
+        skills_dir,
+        skill_conflict,
+        dry_run,
+        force,
+        scan_offline,
+        migrate_secrets,
+        no_backup,
+        yes,
+        overwrite,
+    } = opts;
+
     let _ = SkillConflictPolicy::parse(skill_conflict)?;
 
     let project_root = resolve_project_root(workspace)?;
@@ -120,6 +151,9 @@ pub fn cmd_claw_migrate_openclaw(
         &mut items,
         &mut skipped,
     );
+    if let Some(item) = plan_memory_reindex_item(&items, &memory_root) {
+        items.push(item);
+    }
     plan_archive_only_workspace_files(&project_root, &mut items, &mut archived);
     plan_openclaw_config_archive(&openclaw_home, &mut items, &mut archived);
 
@@ -145,17 +179,17 @@ pub fn cmd_claw_migrate_openclaw(
     }
 
     let report_dir = migration_report_dir(&project_root);
-    print_plan(
-        &project_root,
-        &openclaw_home,
-        &skills_path,
-        &report_dir,
-        &items,
-        &skipped,
-        &archived,
+    print_plan(&MigrationPlanDisplay {
+        project_root: &project_root,
+        openclaw_home: &openclaw_home,
+        skills_path: &skills_path,
+        report_dir: &report_dir,
+        items: &items,
+        skipped: &skipped,
+        archived: &archived,
         dry_run,
         migrate_secrets,
-    );
+    });
 
     if dry_run {
         write_report(
@@ -200,7 +234,7 @@ pub fn cmd_claw_migrate_openclaw(
         Some(zip_path.display().to_string())
     };
 
-    apply_workspace_markdown(
+    let migrated_memory = apply_workspace_markdown(
         &project_root,
         &soul_dest,
         &memory_root,
@@ -208,6 +242,7 @@ pub fn cmd_claw_migrate_openclaw(
         &report_dir,
         &mut items,
     )?;
+    reindex_migrated_memory(&migrated_memory, &mut items)?;
     apply_archive_only(&project_root, &openclaw_home, &report_dir, &mut archived)?;
     if migrate_secrets {
         apply_env_merge(&openclaw_home, &env_dest, overwrite)?;
@@ -438,20 +473,22 @@ fn discover_env_sources(openclaw_home: &Path) -> Vec<PathBuf> {
     out
 }
 
-fn print_plan(
-    project_root: &Path,
-    openclaw_home: &Path,
-    skills_path: &Path,
-    report_dir: &Path,
-    items: &[PlanItem],
-    skipped: &[String],
-    archived: &[String],
-    dry_run: bool,
-    migrate_secrets: bool,
-) {
+fn print_plan(display: &MigrationPlanDisplay<'_>) {
+    let MigrationPlanDisplay {
+        project_root,
+        openclaw_home,
+        skills_path,
+        report_dir,
+        items,
+        skipped,
+        archived,
+        dry_run,
+        migrate_secrets,
+    } = display;
+
     eprintln!(
         "OpenClaw → SkillLite migration{}",
-        if dry_run { " (dry run)" } else { "" }
+        if *dry_run { " (dry run)" } else { "" }
     );
     eprintln!("  Project:      {}", project_root.display());
     eprintln!("  OpenClaw dir: {}", openclaw_home.display());
@@ -463,7 +500,7 @@ fn print_plan(
     eprintln!("  Report dir:   {}", report_dir.display());
     eprintln!(
         "  Secrets:      {}",
-        if migrate_secrets { "yes" } else { "no" }
+        if *migrate_secrets { "yes" } else { "no" }
     );
     eprintln!();
 
@@ -471,7 +508,7 @@ fn print_plan(
         eprintln!("No migratable items planned.");
     } else {
         eprintln!("Planned actions ({}):", items.len());
-        for item in items {
+        for item in *items {
             eprintln!(
                 "  • [{}] {:?} {} → {}",
                 item.category, item.action, item.source, item.destination
@@ -485,7 +522,7 @@ fn print_plan(
     if !skipped.is_empty() {
         eprintln!();
         eprintln!("Skipped / notes:");
-        for line in skipped {
+        for line in *skipped {
             eprintln!("  - {line}");
         }
     }
@@ -493,7 +530,7 @@ fn print_plan(
     if !archived.is_empty() {
         eprintln!();
         eprintln!("Archive for manual review ({}):", archived.len());
-        for path in archived {
+        for path in *archived {
             eprintln!("  - {path}");
         }
     }
@@ -553,7 +590,7 @@ fn create_backup_zip(
             }
             let rel = path
                 .strip_prefix(root)
-                .unwrap_or_else(|_| path)
+                .unwrap_or(path)
                 .to_string_lossy();
             let name = format!("{prefix}/{rel}");
             add_file_to_zip(&mut zip, path, &name, options)?;
@@ -561,7 +598,7 @@ fn create_backup_zip(
     }
 
     zip.finish()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        .map_err(|e| std::io::Error::other(e.to_string()))
         .map_err(crate::Error::from)?;
     Ok(())
 }
@@ -573,12 +610,71 @@ fn add_file_to_zip(
     options: FileOptions,
 ) -> Result<()> {
     zip.start_file(name, options)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        .map_err(|e| std::io::Error::other(e.to_string()))
         .map_err(crate::Error::from)?;
     let mut f = File::open(path).map_err(crate::Error::from)?;
     let mut buf = Vec::new();
     f.read_to_end(&mut buf).map_err(crate::Error::from)?;
     zip.write_all(&buf).map_err(crate::Error::from)?;
+    Ok(())
+}
+
+fn plan_memory_reindex_item(planned: &[PlanItem], memory_root: &Path) -> Option<PlanItem> {
+    let count = planned
+        .iter()
+        .filter(|item| {
+            item.category == "memory"
+                && matches!(
+                    item.action,
+                    PlanAction::Copy | PlanAction::MergeAppend
+                )
+        })
+        .count();
+    if count == 0 {
+        return None;
+    }
+    let chat_root = memory_root
+        .parent()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| memory_root.display().to_string());
+    Some(PlanItem {
+        category: "memory".to_string(),
+        action: PlanAction::ReindexMemory,
+        source: format!("{count} markdown file(s)"),
+        destination: format!("{chat_root}/memory/default.sqlite"),
+        note: Some("BM25 FTS index".to_string()),
+    })
+}
+
+fn reindex_migrated_memory(rel_paths: &[String], items: &mut Vec<PlanItem>) -> Result<()> {
+    if rel_paths.is_empty() {
+        return Ok(());
+    }
+    let chat_root = paths::chat_root();
+    let indexed = skilllite_executor::memory::reindex_memory_markdown_files(
+        &chat_root,
+        "default",
+        rel_paths,
+    )
+    .map_err(|e| crate::Error::Other(anyhow::anyhow!(e.to_string())))?;
+    if indexed.is_empty() {
+        return Ok(());
+    }
+    eprintln!(
+        "Indexed {} memory file(s) for search.",
+        indexed.len()
+    );
+    items.push(PlanItem {
+        category: "memory".to_string(),
+        action: PlanAction::ReindexMemory,
+        source: indexed.join(", "),
+        destination: chat_root
+            .join("memory")
+            .join("default.sqlite")
+            .display()
+            .to_string(),
+        note: None,
+    });
     Ok(())
 }
 
@@ -589,7 +685,8 @@ fn apply_workspace_markdown(
     overwrite: bool,
     report_dir: &Path,
     items: &mut [PlanItem],
-) -> Result<()> {
+) -> Result<Vec<String>> {
+    let mut migrated_memory = Vec::new();
     fs::create_dir_all(memory_root).map_err(crate::Error::from)?;
     if let Some(parent) = soul_dest.parent() {
         fs::create_dir_all(parent).map_err(crate::Error::from)?;
@@ -608,7 +705,9 @@ fn apply_workspace_markdown(
             let src = ws.join(name);
             if src.is_file() {
                 let dest = memory_root.join(name);
-                copy_or_merge_file(&src, &dest, overwrite)?;
+                if copy_or_merge_file(&src, &dest, overwrite)? {
+                    migrated_memory.push(name.to_string());
+                }
             }
         }
 
@@ -620,12 +719,14 @@ fn apply_workspace_markdown(
                     if path.extension().and_then(|s| s.to_str()) != Some("md") {
                         continue;
                     }
-                    let dest = memory_root.join(
-                        path.file_name()
-                            .map(|n| n.to_string_lossy().into_owned())
-                            .unwrap_or_default(),
-                    );
-                    copy_or_merge_file(&path, &dest, overwrite)?;
+                    let file_name = path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    let dest = memory_root.join(&file_name);
+                    if copy_or_merge_file(&path, &dest, overwrite)? {
+                        migrated_memory.push(file_name);
+                    }
                 }
             }
         }
@@ -633,12 +734,12 @@ fn apply_workspace_markdown(
 
     let _ = report_dir;
     let _ = items;
-    Ok(())
+    Ok(migrated_memory)
 }
 
-fn copy_or_merge_file(source: &Path, dest: &Path, overwrite: bool) -> Result<()> {
+fn copy_or_merge_file(source: &Path, dest: &Path, overwrite: bool) -> Result<bool> {
     if dest.exists() && !overwrite {
-        return Ok(());
+        return Ok(false);
     }
     let content = fs::read_to_string(source).map_err(crate::Error::from)?;
     if dest.exists() && overwrite {
@@ -654,7 +755,7 @@ fn copy_or_merge_file(source: &Path, dest: &Path, overwrite: bool) -> Result<()>
     } else {
         fs::write(dest, content).map_err(crate::Error::from)?;
     }
-    Ok(())
+    Ok(true)
 }
 
 fn apply_archive_only(

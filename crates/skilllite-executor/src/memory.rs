@@ -279,6 +279,45 @@ pub fn search_vec(
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
+/// Re-index Markdown files under `chat_root/memory/` into the BM25 FTS table.
+pub fn reindex_memory_markdown_files(
+    chat_root: &Path,
+    agent_id: &str,
+    rel_paths: &[String],
+) -> Result<Vec<String>> {
+    if rel_paths.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let memory_dir = chat_root.join("memory");
+    let idx_path = index_path(chat_root, agent_id);
+    if let Some(parent) = idx_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let conn = Connection::open(&idx_path)?;
+    ensure_index(&conn)?;
+
+    let mut indexed = Vec::new();
+    for rel in rel_paths {
+        if rel.is_empty() || rel.contains("..") || rel.starts_with('/') {
+            continue;
+        }
+        let full = memory_dir.join(rel);
+        if !full.is_file() {
+            continue;
+        }
+        let content = std::fs::read_to_string(&full)?;
+        if content.trim().is_empty() {
+            continue;
+        }
+        index_file(&conn, rel, &content)?;
+        indexed.push(rel.clone());
+    }
+
+    Ok(indexed)
+}
+
 /// Check if vec0 table has any rows (vector index is populated).
 #[cfg(feature = "memory_vector")]
 pub fn has_vec_index(conn: &Connection) -> bool {
@@ -295,4 +334,32 @@ pub struct MemoryHit {
     pub chunk_index: i64,
     pub content: String,
     pub score: f64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn reindex_memory_markdown_files_populates_fts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let chat_root = tmp.path();
+        let memory_dir = chat_root.join("memory");
+        fs::create_dir_all(&memory_dir).unwrap();
+        fs::write(memory_dir.join("MEMORY.md"), "migrated memory about cats").unwrap();
+
+        let indexed =
+            reindex_memory_markdown_files(chat_root, "default", &[String::from("MEMORY.md")])
+                .unwrap();
+        assert_eq!(indexed, vec!["MEMORY.md".to_string()]);
+
+        let conn = Connection::open(index_path(chat_root, "default")).unwrap();
+        let hits = search_bm25(&conn, "cats", 5).unwrap();
+        assert!(
+            hits.iter().any(|h| h.path == "MEMORY.md"),
+            "expected MEMORY.md in FTS hits, got {:?}",
+            hits
+        );
+    }
 }
