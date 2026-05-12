@@ -15,7 +15,9 @@ pub use builtin::{
     get_builtin_tools, process_read_file_tool_result_content, process_tool_result_content,
     process_tool_result_content_fallback,
 };
-pub use memory::{build_memory_context, index_evolution_knowledge};
+pub use memory::{
+    build_memory_context, index_evolution_knowledge, reindex_memory_markdown_files,
+};
 pub use registry::{
     CapabilityPolicy, ExtensionRegistry, ExtensionRegistryBuilder, MemoryVectorContext,
     PlanningControlExecutor, PlanningControlKind, RegisteredTool, ResultProcessingProfile,

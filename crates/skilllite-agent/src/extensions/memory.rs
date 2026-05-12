@@ -540,6 +540,17 @@ pub fn write_structured_experience(
     Ok(())
 }
 
+/// Rebuild BM25 FTS entries for memory markdown files already on disk.
+pub fn reindex_memory_markdown_files(
+    chat_root: &Path,
+    agent_id: &str,
+    rel_paths: &[String],
+) -> Result<Vec<String>> {
+    Ok(skilllite_executor::memory::reindex_memory_markdown_files(
+        chat_root, agent_id, rel_paths,
+    )?)
+}
+
 // ─── Path helpers ───────────────────────────────────────────────────────────
 
 /// Normalize a path by resolving `.` and `..` components without filesystem access.

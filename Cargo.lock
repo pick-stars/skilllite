@@ -2403,7 +2403,6 @@ dependencies = [
  "skilllite-channel",
  "skilllite-core",
  "skilllite-evolution",
- "skilllite-executor",
  "skilllite-fs",
  "skilllite-sandbox",
  "tempfile",

@@ -619,6 +619,7 @@ fn add_file_to_zip(
     Ok(())
 }
 
+#[cfg(feature = "agent")]
 fn plan_memory_reindex_item(planned: &[PlanItem], memory_root: &Path) -> Option<PlanItem> {
     let count = planned
         .iter()
@@ -646,17 +647,22 @@ fn plan_memory_reindex_item(planned: &[PlanItem], memory_root: &Path) -> Option<
     })
 }
 
+#[cfg(not(feature = "agent"))]
+fn plan_memory_reindex_item(_planned: &[PlanItem], _memory_root: &Path) -> Option<PlanItem> {
+    None
+}
+
+#[cfg(feature = "agent")]
 fn reindex_migrated_memory(rel_paths: &[String], items: &mut Vec<PlanItem>) -> Result<()> {
     if rel_paths.is_empty() {
         return Ok(());
     }
     let chat_root = paths::chat_root();
-    let indexed = skilllite_executor::memory::reindex_memory_markdown_files(
+    let indexed = skilllite_agent::extensions::reindex_memory_markdown_files(
         &chat_root,
         "default",
         rel_paths,
-    )
-    .map_err(|e| crate::Error::Other(anyhow::anyhow!(e.to_string())))?;
+    )?;
     if indexed.is_empty() {
         return Ok(());
     }
@@ -675,6 +681,14 @@ fn reindex_migrated_memory(rel_paths: &[String], items: &mut Vec<PlanItem>) -> R
             .to_string(),
         note: None,
     });
+    Ok(())
+}
+
+#[cfg(not(feature = "agent"))]
+fn reindex_migrated_memory(rel_paths: &[String], _items: &mut Vec<PlanItem>) -> Result<()> {
+    if !rel_paths.is_empty() {
+        eprintln!("Memory FTS reindex skipped (build without agent feature).");
+    }
     Ok(())
 }
 
