@@ -778,6 +778,10 @@ pub enum Commands {
     /// **`SKILLLITE_GATEWAY_SERVE_ALLOW=1`**. Non-loopback `--bind` requires `--token` or
     /// **`SKILLLITE_GATEWAY_HTTP_ALLOW_INSECURE_NO_AUTH=1`** (unsafe).
     ///
+    /// Optional outbound summaries on each accepted `POST /webhook/inbound` (best-effort; see
+    /// `SKILLLITE_CHANNEL_DINGTALK_*`, `SKILLLITE_CHANNEL_FEISHU_*`, `SKILLLITE_CHANNEL_TELEGRAM_*`
+    /// in `docs/*/ENV_REFERENCE.md`).
+    ///
     /// Examples:
     ///   SKILLLITE_GATEWAY_SERVE_ALLOW=1 skilllite gateway serve --bind 127.0.0.1:8787
     ///   SKILLLITE_GATEWAY_SERVE_ALLOW=1 skilllite gateway serve --bind 127.0.0.1:8787 --token secret --artifact-dir ./.skilllite
@@ -793,8 +797,10 @@ pub enum Commands {
     /// Refuses to **bind** unless **`SKILLLITE_CHANNEL_SERVE_ALLOW=1`**. Non-loopback `--bind`
     /// requires `--token` or **`SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH=1`** (unsafe).
     ///
-    /// Optional: set **`SKILLLITE_CHANNEL_DINGTALK_WEBHOOK`** (+ optional **`SKILLLITE_CHANNEL_DINGTALK_SECRET`**)
-    /// to forward a short Markdown summary to DingTalk on each accepted POST.
+    /// Optional outbound summaries on each accepted POST (best-effort; failures are logged):
+    /// **`SKILLLITE_CHANNEL_DINGTALK_WEBHOOK`** (+ optional **`SKILLLITE_CHANNEL_DINGTALK_SECRET`**),
+    /// **`SKILLLITE_CHANNEL_FEISHU_WEBHOOK`** (+ optional **`SKILLLITE_CHANNEL_FEISHU_SECRET`**),
+    /// **`SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN`** + **`SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID`**.
     ///
     /// Examples:
     ///   SKILLLITE_CHANNEL_SERVE_ALLOW=1 skilllite channel serve --bind 127.0.0.1:8787
@@ -999,6 +1005,9 @@ pub enum WikiAction {
 #[derive(Subcommand, Debug)]
 pub enum GatewayAction {
     /// Start unified HTTP listener (`GET /health`, `POST /webhook/inbound`, optional artifact routes); blocks until Ctrl+C.
+    ///
+    /// Optional inbound-summary env vars: `SKILLLITE_CHANNEL_DINGTALK_*`, `SKILLLITE_CHANNEL_FEISHU_*`,
+    /// `SKILLLITE_CHANNEL_TELEGRAM_*` (see `docs/*/ENV_REFERENCE.md`).
     Serve {
         /// Listen address (default 127.0.0.1:8787)
         #[arg(long, default_value = "127.0.0.1:8787")]

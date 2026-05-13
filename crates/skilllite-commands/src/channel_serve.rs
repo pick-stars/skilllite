@@ -1,8 +1,13 @@
 //! Inbound HTTP surface for messaging webhooks (MVP), without a separate `skilllite-gateway` crate.
 //!
 //! Binds only when **`SKILLLITE_CHANNEL_SERVE_ALLOW=1`** (same safety pattern as `artifact-serve`).
-//! Optional outbound ping: set `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` (+ optional `SKILLLITE_CHANNEL_DINGTALK_SECRET`)
-//! to receive a short DingTalk text summary for each accepted POST.
+//! Optional outbound summaries: configure any of the `SKILLLITE_CHANNEL_*` env vars below; each
+//! accepted `POST /webhook/inbound` triggers **best-effort** notifications (failures are logged only).
+//!
+//! Supported optional bindings:
+//! - DingTalk: `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` (+ optional `SKILLLITE_CHANNEL_DINGTALK_SECRET`)
+//! - Feishu / Lark: `SKILLLITE_CHANNEL_FEISHU_WEBHOOK` (+ optional `SKILLLITE_CHANNEL_FEISHU_SECRET`)
+//! - Telegram: `SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN` + `SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID`
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -21,6 +26,9 @@ use skilllite_core::config::env_keys::channel as channel_keys;
 
 /// Env var that must equal `1` before `channel serve` will bind (CLI only).
 pub const CHANNEL_SERVE_ALLOW_ENV: &str = channel_keys::SKILLLITE_CHANNEL_SERVE_ALLOW;
+
+/// Upper bound for outbound preview text (shared across IM platforms).
+const INBOUND_NOTIFY_MAX_CHARS: usize = 3500;
 
 #[derive(Clone)]
 struct AppState {
@@ -125,7 +133,7 @@ async fn webhook_inbound(
     let preview = safe_preview_body(&body);
     tracing::info!(len = body.len(), "webhook inbound");
 
-    maybe_notify_dingtalk(&preview).await;
+    maybe_notify_inbound_preview(&preview).await;
 
     (
         StatusCode::OK,
@@ -148,6 +156,35 @@ fn safe_preview_body(body: &Bytes) -> String {
     }
 }
 
+fn clamp_notify_body(s: &str) -> String {
+    if s.chars().count() <= INBOUND_NOTIFY_MAX_CHARS {
+        return s.to_string();
+    }
+    s.chars()
+        .take(INBOUND_NOTIFY_MAX_CHARS)
+        .collect::<String>()
+        + "…"
+}
+
+/// Best-effort outbound summaries (DingTalk / Feishu / Telegram); each reads its own env vars.
+async fn maybe_notify_inbound_preview(preview: &str) {
+    let body = clamp_notify_body(preview);
+    maybe_notify_dingtalk(&body).await;
+    maybe_notify_feishu(&body).await;
+    maybe_notify_telegram(&body).await;
+}
+
+async fn spawn_blocking_notify(
+    platform: &'static str,
+    job: impl FnOnce() -> skilllite_channel::Result<()> + Send + 'static,
+) {
+    match tokio::task::spawn_blocking(job).await {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => tracing::warn!(%platform, error = %e, "optional channel notify failed"),
+        Err(e) => tracing::warn!(%platform, error = %e, "channel notify join failed"),
+    }
+}
+
 async fn maybe_notify_dingtalk(preview: &str) {
     let url = match std::env::var(channel_keys::SKILLLITE_CHANNEL_DINGTALK_WEBHOOK) {
         Ok(s) if !s.trim().is_empty() => s,
@@ -155,17 +192,45 @@ async fn maybe_notify_dingtalk(preview: &str) {
     };
     let secret = std::env::var(channel_keys::SKILLLITE_CHANNEL_DINGTALK_SECRET).ok();
     let preview = preview.to_string();
-    let res = tokio::task::spawn_blocking(move || {
+    spawn_blocking_notify("dingtalk", move || {
         let robot = skilllite_channel::DingTalkRobot::new(url, secret)?;
         let text = format!("Inbound webhook:\n```\n{preview}\n```");
         robot.send_markdown("SkillLite channel serve", &text)
     })
     .await;
-    match res {
-        Ok(Ok(())) => {}
-        Ok(Err(e)) => tracing::warn!(error = %e, "optional dingtalk notify failed"),
-        Err(e) => tracing::warn!(error = %e, "dingtalk spawn_blocking join failed"),
-    }
+}
+
+async fn maybe_notify_feishu(preview: &str) {
+    let url = match std::env::var(channel_keys::SKILLLITE_CHANNEL_FEISHU_WEBHOOK) {
+        Ok(s) if !s.trim().is_empty() => s,
+        _ => return,
+    };
+    let secret = std::env::var(channel_keys::SKILLLITE_CHANNEL_FEISHU_SECRET).ok();
+    let preview = preview.to_string();
+    spawn_blocking_notify("feishu", move || {
+        let bot = skilllite_channel::FeishuBot::new(url, secret)?;
+        let text = format!("Inbound webhook (SkillLite)\n```\n{preview}\n```");
+        bot.send_text(&text)
+    })
+    .await;
+}
+
+async fn maybe_notify_telegram(preview: &str) {
+    let token = match std::env::var(channel_keys::SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN) {
+        Ok(s) if !s.trim().is_empty() => s,
+        _ => return,
+    };
+    let chat_id = match std::env::var(channel_keys::SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID) {
+        Ok(s) if !s.trim().is_empty() => s,
+        _ => return,
+    };
+    let preview = preview.to_string();
+    spawn_blocking_notify("telegram", move || {
+        let bot = skilllite_channel::TelegramBot::new(token, chat_id)?;
+        let text = format!("Inbound webhook (SkillLite)\n```\n{preview}\n```");
+        bot.send_text(&text)
+    })
+    .await;
 }
 
 #[cfg(test)]
@@ -179,6 +244,14 @@ mod tests {
         let p = safe_preview_body(&b);
         assert!(p.contains('…') || p.len() <= 800);
         assert!(p.contains("你好"));
+    }
+
+    #[test]
+    fn clamp_notify_respects_max_chars() {
+        let s = "a".repeat(INBOUND_NOTIFY_MAX_CHARS + 50);
+        let out = clamp_notify_body(&s);
+        assert!(out.ends_with('…'));
+        assert!(out.chars().count() <= INBOUND_NOTIFY_MAX_CHARS + 1);
     }
 
     #[test]

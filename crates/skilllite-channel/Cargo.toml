@@ -6,8 +6,8 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Outbound messaging integrations: WeChat Work, DingTalk, Discord webhooks, WhatsApp Cloud API"
-keywords = ["webhook", "dingtalk", "wechat", "discord", "whatsapp", "skilllite"]
+description = "Outbound messaging integrations: WeChat Work, DingTalk, Feishu/Lark, Telegram, Discord webhooks, WhatsApp Cloud API"
+keywords = ["webhook", "dingtalk", "wechat", "feishu", "lark", "telegram", "discord", "whatsapp", "skilllite"]
 categories = ["web-programming", "development-tools"]
 
 [features]

@@ -154,7 +154,7 @@ When the same variable is set in multiple places, resolution order is (highest â
 
 **Compatibility note**: `skilllite channel serve` and `skilllite artifact-serve` remain available in this phase. `gateway serve` is the preferred unified host when you want a single long-running process for both surfaces.
 
-**Channel note**: when `/webhook/inbound` is hosted by the gateway, the optional DingTalk summary env vars (`SKILLLITE_CHANNEL_DINGTALK_WEBHOOK`, `SKILLLITE_CHANNEL_DINGTALK_SECRET`) still apply.
+**Channel note**: when `/webhook/inbound` is hosted by the gateway, the optional inbound-summary env vars still apply: `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` / `SKILLLITE_CHANNEL_DINGTALK_SECRET`, `SKILLLITE_CHANNEL_FEISHU_WEBHOOK` / `SKILLLITE_CHANNEL_FEISHU_SECRET`, and `SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN` + `SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID`.
 
 ---
 
@@ -166,6 +166,10 @@ When the same variable is set in multiple places, resolution order is (highest â
 | `SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH` | string | unset | When **`1`**, allows **non-loopback** `--bind` **without** `--token` (unsafe; use only behind a reverse proxy you trust). |
 | `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` | string | unset | When set (HTTPS URL), each accepted `POST /webhook/inbound` triggers an optional DingTalk Markdown summary (best-effort; failures are logged). |
 | `SKILLLITE_CHANNEL_DINGTALK_SECRET` | string | unset | DingTalk robot signing secret when using `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` with signing enabled. |
+| `SKILLLITE_CHANNEL_FEISHU_WEBHOOK` | string | unset | When set (HTTPS Feishu/Lark custom-bot hook URL), each accepted inbound POST triggers an optional Feishu `text` summary (best-effort; failures are logged). |
+| `SKILLLITE_CHANNEL_FEISHU_SECRET` | string | unset | Feishu signing secret when signature verification is enabled on the bot. |
+| `SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN` | string | unset | When set together with `SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID`, each inbound POST triggers an optional `sendMessage` text summary (best-effort; failures are logged). |
+| `SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID` | string | unset | Telegram destination chat id (numeric, `-100â€¦`, or `@username`); must be configured with `SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN`. |
 
 **Endpoints**: `GET /health`, `POST /webhook/inbound`. When `--token` is set, inbound POSTs must send `Authorization: Bearer <token>`.
 

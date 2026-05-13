@@ -336,6 +336,14 @@ pub mod channel {
     pub const SKILLLITE_CHANNEL_DINGTALK_WEBHOOK: &str = "SKILLLITE_CHANNEL_DINGTALK_WEBHOOK";
     /// Optional DingTalk signing secret paired with the webhook.
     pub const SKILLLITE_CHANNEL_DINGTALK_SECRET: &str = "SKILLLITE_CHANNEL_DINGTALK_SECRET";
+    /// Feishu / Lark custom bot webhook URL (`.../open-apis/bot/v2/hook/...`).
+    pub const SKILLLITE_CHANNEL_FEISHU_WEBHOOK: &str = "SKILLLITE_CHANNEL_FEISHU_WEBHOOK";
+    /// Optional Feishu signing secret when the bot has signature verification enabled.
+    pub const SKILLLITE_CHANNEL_FEISHU_SECRET: &str = "SKILLLITE_CHANNEL_FEISHU_SECRET";
+    /// Telegram Bot API token (`sendMessage`).
+    pub const SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN: &str = "SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN";
+    /// Telegram `chat_id` (numeric, `-100…`, or `@channelusername`).
+    pub const SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID: &str = "SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID";
 }
 
 /// Artifact HTTP server (`skilllite artifact serve`)
@@ -489,9 +497,13 @@ pub fn all_known_keys() -> &'static [&'static str] {
         "SKILLLITE_CACHE_DIR",
         "SKILLLITE_CHANNEL_DINGTALK_SECRET",
         "SKILLLITE_CHANNEL_DINGTALK_WEBHOOK",
+        "SKILLLITE_CHANNEL_FEISHU_SECRET",
+        "SKILLLITE_CHANNEL_FEISHU_WEBHOOK",
         "SKILLLITE_CHANNEL_HTTP_ADDR",
         "SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH",
         "SKILLLITE_CHANNEL_SERVE_ALLOW",
+        "SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN",
+        "SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID",
         "SKILLLITE_CHUNK_SIZE",
         "SKILLLITE_COMPACTION_KEEP_RECENT",
         "SKILLLITE_COMPACTION_THRESHOLD",
@@ -674,6 +686,10 @@ mod tests {
             channel::SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH,
             channel::SKILLLITE_CHANNEL_DINGTALK_WEBHOOK,
             channel::SKILLLITE_CHANNEL_DINGTALK_SECRET,
+            channel::SKILLLITE_CHANNEL_FEISHU_WEBHOOK,
+            channel::SKILLLITE_CHANNEL_FEISHU_SECRET,
+            channel::SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN,
+            channel::SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID,
             artifact::SKILLLITE_ARTIFACT_HTTP_ADDR,
             artifact::SKILLLITE_ARTIFACT_HTTP_REQUIRE_AUTH,
             artifact::SKILLLITE_ARTIFACT_HTTP_ALLOW_INSECURE_NO_AUTH,

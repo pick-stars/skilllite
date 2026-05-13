@@ -154,7 +154,7 @@
 
 **兼容说明**：本阶段 `skilllite channel serve` 与 `skilllite artifact-serve` 仍然可用；若希望用**一个常驻进程**同时承载两类 HTTP 面，优先使用 `gateway serve`。
 
-**Channel 说明**：当 `/webhook/inbound` 由 gateway 托管时，可选的钉钉摘要环境变量（`SKILLLITE_CHANNEL_DINGTALK_WEBHOOK`、`SKILLLITE_CHANNEL_DINGTALK_SECRET`）仍然生效。
+**Channel 说明**：当 `/webhook/inbound` 由 gateway 托管时，可选的入站摘要环境变量仍生效：`SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` / `SKILLLITE_CHANNEL_DINGTALK_SECRET`、`SKILLLITE_CHANNEL_FEISHU_WEBHOOK` / `SKILLLITE_CHANNEL_FEISHU_SECRET`、`SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN` + `SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID`。
 
 ---
 
@@ -166,6 +166,10 @@
 | `SKILLLITE_CHANNEL_HTTP_ALLOW_INSECURE_NO_AUTH` | string | 未设置 | 为 **`1`** 时允许**非回环** `--bind` 且**无** `--token`（不安全，仅建议在可信反向代理后使用）。 |
 | `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` | string | 未设置 | 若设为 HTTPS 机器人 URL，每次接受的 `POST /webhook/inbound` 会**尽力**推送一条钉钉 Markdown 摘要（失败仅打日志）。 |
 | `SKILLLITE_CHANNEL_DINGTALK_SECRET` | string | 未设置 | 与 `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` 配套的可选加签密钥。 |
+| `SKILLLITE_CHANNEL_FEISHU_WEBHOOK` | string | 未设置 | 若设为飞书自定义机器人 HTTPS Webhook，每次入站会**尽力**推送一条文本摘要（失败仅打日志）。 |
+| `SKILLLITE_CHANNEL_FEISHU_SECRET` | string | 未设置 | 飞书机器人开启签名校验时的密钥；与 `SKILLLITE_CHANNEL_FEISHU_WEBHOOK` 配套。 |
+| `SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN` | string | 未设置 | 与 `SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID` 同时配置时，每次入站会**尽力**调用 `sendMessage` 推送文本摘要。 |
+| `SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID` | string | 未设置 | Telegram 目标会话 id（数字、`-100…` 或 `@username`）；须与 `SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN` 同配。 |
 
 **端点**：`GET /health`、`POST /webhook/inbound`。若指定 `--token`，入站 POST 须带 `Authorization: Bearer <token>`。
 

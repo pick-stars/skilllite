@@ -19,6 +19,16 @@ npm install
 npm run tauri dev
 ```
 
+### 端口 5173 已被占用
+
+开发服务器固定使用 **5173**（与 `src-tauri/tauri.conf.json` 里的 `devUrl` 一致），且 `vite.config.ts` 里为 **`strictPort: true`**，被占用时会直接报错：`Port 5173 is already in use`。
+
+1. 查看占用进程：`lsof -nP -iTCP:5173 -sTCP:LISTEN`
+2. 若确认可结束（例如上次未关干净的 Vite / 另一个前端项目），例如：`kill <PID>`  
+   本机曾出现示例：`node` 监听 `[::1]:5173`。
+
+若你**需要同时**跑两个 Vite 项目，不要只改 `vite.config.ts` 端口而不改 Tauri 的 `devUrl`，否则桌面壳仍连旧地址；应成对修改 `vite.config.ts` 的 `server.port` 与 `tauri.conf.json` 的 `build.devUrl`。
+
 ## 构建
 
 ```bash

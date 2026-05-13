@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub enum ChannelKind {
     WeChatWork,
     DingTalk,
+    Feishu,
+    Telegram,
     Discord,
     WhatsApp,
 }

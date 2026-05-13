@@ -14,7 +14,7 @@ categories = ["command-line-utilities", "development-tools"]
 default = []
 agent = ["dep:skilllite-agent", "dep:tokio", "dep:uuid", "dep:rustyline", "skilllite-core/async-resolve"]
 audit = ["skilllite-sandbox/audit", "dep:ureq"]
-# Inbound webhook HTTP (`skilllite channel serve`); optional DingTalk echo via env (see channel_serve.rs).
+# Inbound webhook HTTP (`skilllite channel serve`); optional IM summaries via env (see channel_serve.rs).
 channel_serve = [
     "dep:skilllite-channel",
     "dep:tokio",

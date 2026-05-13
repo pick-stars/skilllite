@@ -157,7 +157,7 @@ skillLite/
 │   │
 │   ├── skilllite-artifact/        # ArtifactStore 实现：本地目录（agent 默认）、可选 HTTP 服务端/客户端
 │   │
-│   ├── skilllite-channel/         # 出站消息（企微、钉钉、Discord、WhatsApp）。入站 webhook MVP 仍保持轻量（`skilllite channel serve`）；统一宿主优先走 `skilllite gateway serve`。本阶段仍无独立 `skilllite-gateway` crate。
+│   ├── skilllite-channel/         # 出站消息（企微、钉钉、飞书、Telegram、Discord、WhatsApp）。入站 webhook MVP 仍保持轻量（`skilllite channel serve`）；统一宿主优先走 `skilllite gateway serve`。本阶段仍无独立 `skilllite-gateway` crate。
 │   │
 │   └── skilllite-assistant/       # Tauri 2 + React 桌面端 — 一等入口（Phase 0 D1）；因 Tauri 需平台 GUI 工具链而被 root workspace 排除，使用单独 manifest 构建。直接 path 依赖：core、fs、sandbox、agent、evolution。
 │       ├── vite.config.ts         # 唯一 Vite 配置（勿再并列 vite.config.js；见该 crate README）

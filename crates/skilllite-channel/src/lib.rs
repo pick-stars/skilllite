@@ -1,4 +1,4 @@
-//! 出站消息渠道：企业微信、钉钉、Discord Webhook、WhatsApp Cloud API。
+//! 出站消息渠道：企业微信、钉钉、飞书、Telegram、Discord Webhook、WhatsApp Cloud API。
 //!
 //! 默认启用 `http` feature（基于 `reqwest::blocking`）。上层（CLI、Desktop、Agent 扩展）
 //! 可依赖本 crate 做告警推送，而不反向依赖 `skilllite-agent`。
@@ -9,6 +9,8 @@
 //! |------|------|------|
 //! | 企业微信群机器人 | [`wechat_work::WeChatWorkRobot`] | `text` / `markdown` |
 //! | 钉钉自定义机器人 | [`dingtalk::DingTalkRobot`] | `text` / `markdown`，可选加签 |
+//! | 飞书自定义机器人 | [`feishu::FeishuBot`] | `text`；可选签名校验 |
+//! | Telegram Bot API | [`telegram::TelegramBot`] | `sendMessage` 纯文本 |
 //! | Discord Incoming Webhook | [`discord::DiscordWebhook`] | 纯文本 `content` |
 //! | WhatsApp Cloud API | [`whatsapp::WhatsAppCloud`] | Graph `messages` 文本 |
 //!
@@ -25,6 +27,10 @@ pub mod dingtalk;
 #[cfg(feature = "http")]
 pub mod discord;
 #[cfg(feature = "http")]
+pub mod feishu;
+#[cfg(feature = "http")]
+pub mod telegram;
+#[cfg(feature = "http")]
 pub mod wechat_work;
 #[cfg(feature = "http")]
 pub mod whatsapp;
@@ -37,6 +43,10 @@ pub use dingtalk::DingTalkRobot;
 #[cfg(feature = "http")]
 pub use discord::DiscordWebhook;
 #[cfg(feature = "http")]
+pub use feishu::FeishuBot;
+#[cfg(feature = "http")]
+pub use telegram::TelegramBot;
+#[cfg(feature = "http")]
 pub use wechat_work::WeChatWorkRobot;
 #[cfg(feature = "http")]
 pub use whatsapp::{WhatsAppCloud, WHATSAPP_GRAPH_API_VERSION};
@@ -44,6 +54,7 @@ pub use whatsapp::{WhatsAppCloud, WHATSAPP_GRAPH_API_VERSION};
 #[cfg(all(test, feature = "http"))]
 mod tests {
     use super::dingtalk::dingtalk_sign;
+    use super::feishu::feishu_sign;
     use super::whatsapp::WhatsAppCloud;
 
     #[test]
@@ -60,6 +71,18 @@ mod tests {
     fn dingtalk_sign_rejects_empty_hmac_key() {
         let r = dingtalk_sign("", 1);
         assert!(r.is_err(), "empty secret must not build HMAC");
+    }
+
+    #[test]
+    fn feishu_sign_matches_feishu_doc_vector() {
+        // From Feishu custom-bot signing examples (timestamp=1599360473, secret="demo").
+        let sign = feishu_sign("demo", 1_599_360_473).expect("sign");
+        assert_eq!(sign, "l1N0gAcBjdwBvGm1xMjOF0XSyaLRpR7tuO5dHfhAYc8=");
+    }
+
+    #[test]
+    fn feishu_sign_rejects_empty_secret() {
+        assert!(feishu_sign("", 1).is_err());
     }
 
     #[test]
@@ -89,5 +112,18 @@ mod tests {
     fn discord_rejects_http_url() {
         let r = super::DiscordWebhook::new("http://discord.com/api/webhooks/x/y");
         assert!(r.is_err());
+    }
+
+    #[test]
+    fn feishu_rejects_http_url() {
+        let r = super::FeishuBot::new("http://open.feishu.cn/open-apis/bot/v2/hook/x", None);
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn telegram_rejects_blank_token_or_chat() {
+        assert!(super::TelegramBot::new("", "1").is_err());
+        assert!(super::TelegramBot::new("tok\nbad", "1").is_err());
+        assert!(super::TelegramBot::new("tok", "").is_err());
     }
 }

@@ -159,7 +159,7 @@ skillLite/
 │   │
 │   ├── skilllite-artifact/        # ArtifactStore impls: local dir (default for agent), optional HTTP server/client
 │   │
-│   ├── skilllite-channel/         # Outbound messaging (WeChat Work, DingTalk, Discord, WhatsApp). Inbound webhook MVP stays thin (`skilllite channel serve`), while `skilllite gateway serve` is the preferred unified host. No separate `skilllite-gateway` crate in this phase.
+│   ├── skilllite-channel/         # Outbound messaging (WeChat Work, DingTalk, Feishu/Lark, Telegram, Discord, WhatsApp). Inbound webhook MVP stays thin (`skilllite channel serve`), while `skilllite gateway serve` is the preferred unified host. No separate `skilllite-gateway` crate in this phase.
 │   │
 │   └── skilllite-assistant/       # Tauri 2 + React desktop — first-class entry (Phase 0 D1); excluded from root workspace because Tauri needs platform GUI toolchains. Build via separate manifest. Direct path deps: core, fs, sandbox, agent, evolution.
 │       ├── vite.config.ts         # sole Vite config (do not duplicate vite.config.js; see crate README)
