@@ -55,7 +55,7 @@ npm run tauri:build
 
 ## 环境与 Skills
 
-- **设置 UI**：主窗口中进入 **设置** 为全屏分区视图（左侧导航）；**环境与依赖** 可检测 Git、一键下载 Python/Node 运行时；**工作区与环境** 分组下另有 **「Gateway / 入站 HTTP」** 独立页，用于填写 `skilllite gateway serve` 的 `--bind` / `--token` / 可选 `--artifact-dir`、展示 URL、执行桌面托管的**一键启动 / 停止**、复制外部启动命令与本机 **`/health`** 探测（仍可改为终端 / systemd 自行托管）。若同一监听地址上已存在一个**外部** `skilllite gateway serve`，页面会识别并显示为**外部运行中**，而不是仅报端口占用错误。
+- **设置 UI**：主窗口中进入 **设置** 为全屏分区视图（左侧导航）；**环境与依赖** 可检测 Git、一键下载 Python/Node 运行时；**工作区与环境** 分组下另有 **「Gateway / 入站 HTTP」** 独立页，用于填写 `skilllite gateway serve` 的 `--bind` / `--token` / 可选 `--artifact-dir`、**入站摘要通知**（钉钉 / 飞书 / Telegram 的 Webhook 与密钥，存 `localStorage`，「在这里启动」时注入子进程）、展示 URL、执行桌面托管的**一键启动 / 停止**、复制外部启动命令与本机 **`/health`** 探测（仍可改为终端 / systemd 自行托管）。若同一监听地址上已存在一个**外部** `skilllite gateway serve`，页面会识别并显示为**外部运行中**，而不是仅报端口占用错误。
 - **API Key**：在项目根目录或 workspace 的 `.env` 中设置 `OPENAI_API_KEY`
 - **Skills**：会自动从 workspace 向上查找 `skills`、`.skills`、`.agents/skills`、`.claude/skills`；默认技能根目录解析与 `skilllite-core::skill::discovery` 保持一致（含 `skills -> .skills` 兼容回退）
 - **skilllite**：需已安装（`pip install skilllite` 或 `cargo install --path skilllite`）

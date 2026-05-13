@@ -7,6 +7,7 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
+use skilllite_core::config::env_keys::channel as channel_env_keys;
 
 use crate::skilllite_bridge;
 
@@ -41,6 +42,19 @@ pub struct GatewayStartRequest {
     pub bind: String,
     pub token: Option<String>,
     pub artifact_dir: Option<String>,
+    /// Optional `SKILLLITE_CHANNEL_DINGTALK_WEBHOOK` for inbound webhook summaries.
+    #[serde(default)]
+    pub gateway_channel_dingtalk_webhook: Option<String>,
+    #[serde(default)]
+    pub gateway_channel_dingtalk_secret: Option<String>,
+    #[serde(default)]
+    pub gateway_channel_feishu_webhook: Option<String>,
+    #[serde(default)]
+    pub gateway_channel_feishu_secret: Option<String>,
+    #[serde(default)]
+    pub gateway_channel_telegram_bot_token: Option<String>,
+    #[serde(default)]
+    pub gateway_channel_telegram_chat_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -124,8 +138,9 @@ pub fn start_gateway(
     .env(
         skilllite_core::config::env_keys::desktop::SKILLLITE_GATEWAY_SERVE_ALLOW,
         "1",
-    )
-    .current_dir(&working_dir)
+    );
+    apply_gateway_channel_notify_env(&mut cmd, &request);
+    cmd.current_dir(&working_dir)
     .stdin(Stdio::null())
     .stdout(Stdio::null())
     .stderr(Stdio::piped());
@@ -293,6 +308,33 @@ fn normalize_optional_cli_value(raw: Option<&str>) -> Option<String> {
             Some(trimmed.to_string())
         }
     })
+}
+
+/// Injects optional `SKILLLITE_CHANNEL_*` env vars for `channel_serve` inbound summaries (same as CLI).
+fn apply_gateway_channel_notify_env(cmd: &mut Command, req: &GatewayStartRequest) {
+    if let Some(v) = normalize_optional_cli_value(req.gateway_channel_dingtalk_webhook.as_deref()) {
+        cmd.env(
+            channel_env_keys::SKILLLITE_CHANNEL_DINGTALK_WEBHOOK,
+            v,
+        );
+    }
+    if let Some(v) = normalize_optional_cli_value(req.gateway_channel_dingtalk_secret.as_deref()) {
+        cmd.env(channel_env_keys::SKILLLITE_CHANNEL_DINGTALK_SECRET, v);
+    }
+    if let Some(v) = normalize_optional_cli_value(req.gateway_channel_feishu_webhook.as_deref()) {
+        cmd.env(channel_env_keys::SKILLLITE_CHANNEL_FEISHU_WEBHOOK, v);
+    }
+    if let Some(v) = normalize_optional_cli_value(req.gateway_channel_feishu_secret.as_deref()) {
+        cmd.env(channel_env_keys::SKILLLITE_CHANNEL_FEISHU_SECRET, v);
+    }
+    if let Some(v) = normalize_optional_cli_value(req.gateway_channel_telegram_bot_token.as_deref())
+    {
+        cmd.env(channel_env_keys::SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN, v);
+    }
+    if let Some(v) = normalize_optional_cli_value(req.gateway_channel_telegram_chat_id.as_deref())
+    {
+        cmd.env(channel_env_keys::SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID, v);
+    }
 }
 
 fn refresh_runtime_status(runtime: &mut GatewayRuntime) {
@@ -465,5 +507,13 @@ mod tests {
             gateway_health_url("127.0.0.1:8787").as_deref(),
             Some("http://127.0.0.1:8787/health")
         );
+    }
+
+    #[test]
+    fn gateway_start_request_deserializes_without_channel_fields() {
+        let j = r#"{"bind":"127.0.0.1:1","workspace":null,"token":null,"artifactDir":null}"#;
+        let r: GatewayStartRequest = serde_json::from_str(j).expect("json");
+        assert!(r.gateway_channel_dingtalk_webhook.is_none());
+        assert!(r.gateway_channel_feishu_webhook.is_none());
     }
 }

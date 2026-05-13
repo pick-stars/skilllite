@@ -565,7 +565,7 @@ export const zhMessages: Record<string, string> = {
 
   "settings.gatewayServe.title": "Gateway（统一 HTTP 宿主）",
   "settings.gatewayServe.subtitle":
-    "为 `skilllite gateway serve` 配置监听地址、可选 Token 与可选 artifact 目录。你可以直接在本页拉起一个由桌面端托管的本地 gateway；若需要，也仍可复制命令交给终端或 systemd 长期托管。",
+    "本页分为两块：入站（本机 gateway serve 监听与健康检查）与 出站（入站成功后向 IM 推送摘要）。可在此托管启动或复制终端命令。",
   "settings.gatewayServe.bPatternNote":
     "推荐：使用 `gateway serve` 作为统一宿主，在一个进程中承载入站 webhook，并可按需挂载 artifact HTTP；本页可直接启动/停止本地托管进程、查看 URL、复制外部启动命令，并在本机探测健康检查。",
   "settings.gatewayServe.bindLabel": "监听地址（host:port）",
@@ -591,7 +591,7 @@ export const zhMessages: Record<string, string> = {
   "settings.gatewayServe.managedLastError": "最近错误：{msg}",
   "settings.gatewayServe.managedRecentLog": "最近日志：{msg}",
   "settings.gatewayServe.restartAfterChange":
-    "当前托管中的 gateway 会继续使用启动时那组参数。修改监听地址、Token 或 artifact 目录后，需要先停止再重新启动，新的配置才会生效。",
+    "当前托管中的 gateway 会继续使用启动时那组参数。修改监听地址、Token、artifact 目录或下方入站摘要（钉钉/飞书/Telegram）后，需要先停止再重新启动，新的配置才会生效。",
   "settings.gatewayServe.startManaged": "在这里启动",
   "settings.gatewayServe.stopManaged": "停止",
   "settings.gatewayServe.managedStarting": "启动中…",
@@ -618,6 +618,20 @@ export const zhMessages: Record<string, string> = {
   "settings.gatewayServe.healthBadgeFail": "不可达",
   "settings.gatewayServe.webhookAuthHint":
     "若填写 Token，gateway 会把同一个 `Authorization: Bearer <token>` 应用于所挂载的 webhook 与 artifact HTTP 路由。Token 与 API Key 一样仅存本机，请勿写入仓库。",
+  "settings.gatewayServe.sectionInboundBadge": "入站",
+  "settings.gatewayServe.sectionInboundTitle": "HTTP 服务（本机监听）",
+  "settings.gatewayServe.sectionInboundIntro":
+    "提供 `GET /health`、`POST /webhook/inbound`；可选 artifact 路由。下方为监听参数与对外地址。",
+  "settings.gatewayServe.sectionOutboundBadge": "出站",
+  "settings.gatewayServe.sectionOutboundTitle": "IM 通知（由入站触发）",
+  "settings.gatewayServe.sectionOutboundIntro":
+    "每次入站请求被成功接受后，可按需向钉钉 / 飞书 / Telegram 推送短摘要。写入本应用 localStorage；「在这里启动」时注入子进程环境变量。",
+  "settings.gatewayServe.dingtalkWebhookLabel": "钉钉 Webhook URL",
+  "settings.gatewayServe.dingtalkSecretLabel": "钉钉加签密钥（可选）",
+  "settings.gatewayServe.feishuWebhookLabel": "飞书 Webhook URL",
+  "settings.gatewayServe.feishuSecretLabel": "飞书签名校验密钥（可选）",
+  "settings.gatewayServe.telegramBotTokenLabel": "Telegram Bot Token",
+  "settings.gatewayServe.telegramChatIdLabel": "Telegram chat_id",
   "settings.gatewayServe.clipboardFail": "无法复制到剪贴板",
 
   "settings.evolutionIntro":

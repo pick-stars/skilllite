@@ -28,18 +28,51 @@ function shellQuoteSingle(raw: string): string {
   return `'${raw.replace(/'/g, `'\"'\"'`)}'`;
 }
 
-function buildStartCommand(bind: string, token: string | undefined, artifactDir: string | undefined): string {
-  const b = bind.trim() || DEFAULT_BIND;
-  let cmd = `SKILLLITE_GATEWAY_SERVE_ALLOW=1 skilllite gateway serve --bind ${b}`;
-  const t = token?.trim();
+function trimToNull(raw: string | undefined): string | null {
+  const t = raw?.trim() ?? "";
+  return t ? t : null;
+}
+
+function pushExportLine(lines: string[], name: string, value: string | undefined): void {
+  const v = value?.trim();
+  if (v) {
+    lines.push(`export ${name}=${shellQuoteSingle(v)}`);
+  }
+}
+
+function buildStartCommand(opts: {
+  bind: string;
+  token?: string;
+  artifactDir?: string;
+  dingtalkWebhook?: string;
+  dingtalkSecret?: string;
+  feishuWebhook?: string;
+  feishuSecret?: string;
+  telegramBotToken?: string;
+  telegramChatId?: string;
+}): string {
+  const lines: string[] = [];
+  pushExportLine(lines, "SKILLLITE_CHANNEL_DINGTALK_WEBHOOK", opts.dingtalkWebhook);
+  pushExportLine(lines, "SKILLLITE_CHANNEL_DINGTALK_SECRET", opts.dingtalkSecret);
+  pushExportLine(lines, "SKILLLITE_CHANNEL_FEISHU_WEBHOOK", opts.feishuWebhook);
+  pushExportLine(lines, "SKILLLITE_CHANNEL_FEISHU_SECRET", opts.feishuSecret);
+  pushExportLine(lines, "SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN", opts.telegramBotToken);
+  pushExportLine(lines, "SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID", opts.telegramChatId);
+
+  const b = opts.bind.trim() || DEFAULT_BIND;
+  let main = `SKILLLITE_GATEWAY_SERVE_ALLOW=1 skilllite gateway serve --bind ${b}`;
+  const t = opts.token?.trim();
   if (t) {
-    cmd += ` --token ${shellQuoteSingle(t)}`;
+    main += ` --token ${shellQuoteSingle(t)}`;
   }
-  const a = artifactDir?.trim();
+  const a = opts.artifactDir?.trim();
   if (a) {
-    cmd += ` --artifact-dir ${shellQuoteSingle(a)}`;
+    main += ` --artifact-dir ${shellQuoteSingle(a)}`;
   }
-  return cmd;
+  if (lines.length > 0) {
+    return `${lines.join("\n")}\n${main}`;
+  }
+  return main;
 }
 
 interface GatewayManagedStatus {
@@ -85,6 +118,12 @@ export default function GatewayServeSettingsSection() {
   const bind = settings.gatewayServeBind ?? DEFAULT_BIND;
   const token = settings.gatewayServeToken ?? "";
   const artifactDir = settings.gatewayArtifactDir ?? "";
+  const dingtalkWebhook = settings.gatewayChannelDingtalkWebhook ?? "";
+  const dingtalkSecret = settings.gatewayChannelDingtalkSecret ?? "";
+  const feishuWebhook = settings.gatewayChannelFeishuWebhook ?? "";
+  const feishuSecret = settings.gatewayChannelFeishuSecret ?? "";
+  const telegramBotToken = settings.gatewayChannelTelegramBotToken ?? "";
+  const telegramChatId = settings.gatewayChannelTelegramChatId ?? "";
   const workspace = settings.workspace;
 
   const baseUrl = useMemo(() => httpBaseForLocalFetch(bind), [bind]);
@@ -92,8 +131,29 @@ export default function GatewayServeSettingsSection() {
   const webhookUrl = `${baseUrl}/webhook/inbound`;
   const artifactUrl = `${baseUrl}/v1/runs/<run_id>/artifacts?key=<key>`;
   const startCmd = useMemo(
-    () => buildStartCommand(bind, token || undefined, artifactDir || undefined),
-    [artifactDir, bind, token]
+    () =>
+      buildStartCommand({
+        bind,
+        token: token || undefined,
+        artifactDir: artifactDir || undefined,
+        dingtalkWebhook: dingtalkWebhook || undefined,
+        dingtalkSecret: dingtalkSecret || undefined,
+        feishuWebhook: feishuWebhook || undefined,
+        feishuSecret: feishuSecret || undefined,
+        telegramBotToken: telegramBotToken || undefined,
+        telegramChatId: telegramChatId || undefined,
+      }),
+    [
+      artifactDir,
+      bind,
+      dingtalkSecret,
+      dingtalkWebhook,
+      feishuSecret,
+      feishuWebhook,
+      telegramBotToken,
+      telegramChatId,
+      token,
+    ]
   );
   const gatewaySource = gatewayStatus?.source ?? "none";
   const gatewayRunning = gatewayStatus?.running ?? false;
@@ -150,6 +210,12 @@ export default function GatewayServeSettingsSection() {
           bind,
           token: token || null,
           artifactDir: artifactDir || null,
+          gatewayChannelDingtalkWebhook: trimToNull(dingtalkWebhook),
+          gatewayChannelDingtalkSecret: trimToNull(dingtalkSecret),
+          gatewayChannelFeishuWebhook: trimToNull(feishuWebhook),
+          gatewayChannelFeishuSecret: trimToNull(feishuSecret),
+          gatewayChannelTelegramBotToken: trimToNull(telegramBotToken),
+          gatewayChannelTelegramChatId: trimToNull(telegramChatId),
         },
       });
       setGatewayStatus(status);
@@ -167,7 +233,20 @@ export default function GatewayServeSettingsSection() {
     } finally {
       setGatewayBusy(null);
     }
-  }, [artifactDir, bind, refreshGatewayStatus, t, token, workspace]);
+  }, [
+    artifactDir,
+    bind,
+    dingtalkSecret,
+    dingtalkWebhook,
+    feishuSecret,
+    feishuWebhook,
+    refreshGatewayStatus,
+    t,
+    telegramBotToken,
+    telegramChatId,
+    token,
+    workspace,
+  ]);
 
   const stopManagedGateway = useCallback(async () => {
     setGatewayBusy("stop");
@@ -231,7 +310,28 @@ export default function GatewayServeSettingsSection() {
         <p className="mt-1 text-xs leading-snug text-ink-mute dark:text-ink-dark-mute">{t("settings.gatewayServe.subtitle")}</p>
       </div>
 
-      <div className="space-y-4 p-4">
+      <div className="space-y-5 p-4">
+        {/* 入站：本机 HTTP 监听与操作 */}
+        <div
+          className="rounded-lg border border-border bg-white dark:border-border-dark dark:bg-paper-dark"
+          role="region"
+          aria-labelledby="gateway-inbound-section-title"
+        >
+          <div className="border-b border-border/60 px-3 py-2 sm:px-4 dark:border-border-dark/60">
+            <h4
+              id="gateway-inbound-section-title"
+              className="text-sm font-semibold text-ink dark:text-ink-dark"
+            >
+              <span className="mr-2 font-mono text-[10px] font-semibold uppercase tracking-wide text-ink-mute dark:text-ink-dark-mute">
+                {t("settings.gatewayServe.sectionInboundBadge")}
+              </span>
+              {t("settings.gatewayServe.sectionInboundTitle")}
+            </h4>
+            <p className="mt-0.5 text-[11px] leading-snug text-ink-mute dark:text-ink-dark-mute">
+              {t("settings.gatewayServe.sectionInboundIntro")}
+            </p>
+          </div>
+          <div className="space-y-4 p-3 sm:p-4">
         <p className="text-xs leading-relaxed text-ink-mute dark:text-ink-dark-mute">{t("settings.gatewayServe.bPatternNote")}</p>
 
         <div className="rounded-lg border border-dashed border-border px-3 py-2.5 dark:border-border-dark">
@@ -239,7 +339,7 @@ export default function GatewayServeSettingsSection() {
             <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-mute dark:text-ink-dark-mute">
               {t("settings.gatewayServe.managedStatusHeading")}
             </span>
-            <span className={`text-xs font-medium ${gatewayRunning ? "text-emerald-700 dark:text-emerald-300" : "text-amber-800 dark:text-amber-200"}`}>
+            <span className={`text-xs font-medium ${gatewayRunning ? "text-ink dark:text-ink-dark" : "text-ink-mute dark:text-ink-dark-mute"}`}>
               {managedRunning
                 ? t("settings.gatewayServe.managedStatusRunning")
                 : externalRunning
@@ -263,7 +363,7 @@ export default function GatewayServeSettingsSection() {
             </p>
           ) : null}
           {!externalRunning && gatewayStatus?.lastError ? (
-            <p className="mt-2 text-[11px] leading-snug text-amber-800 dark:text-amber-200">
+            <p className="mt-2 text-[11px] leading-snug text-ink dark:text-ink-dark">
               {t("settings.gatewayServe.managedLastError", { msg: gatewayStatus.lastError })}
             </p>
           ) : null}
@@ -390,12 +490,12 @@ export default function GatewayServeSettingsSection() {
             {healthBusy ? t("settings.gatewayServe.healthChecking") : t("settings.gatewayServe.healthCheck")}
           </button>
           {healthLabel === "ok" ? (
-            <span className="self-center text-xs font-medium text-emerald-700 dark:text-emerald-300">
+            <span className="self-center text-xs font-medium text-ink-mute dark:text-ink-dark-mute">
               {t("settings.gatewayServe.healthBadgeOk")}
             </span>
           ) : null}
           {healthLabel === "fail" ? (
-            <span className="self-center text-xs font-medium text-amber-800 dark:text-amber-200">
+            <span className="self-center text-xs font-medium text-ink dark:text-ink-dark">
               {t("settings.gatewayServe.healthBadgeFail")}
             </span>
           ) : null}
@@ -406,6 +506,100 @@ export default function GatewayServeSettingsSection() {
         </pre>
 
         <p className="text-[11px] leading-snug text-ink-mute dark:text-ink-dark-mute">{t("settings.gatewayServe.webhookAuthHint")}</p>
+          </div>
+        </div>
+
+        {/* 出站：入站成功后推送到 IM */}
+        <div
+          className="rounded-lg border border-border bg-white dark:border-border-dark dark:bg-paper-dark"
+          role="region"
+          aria-labelledby="gateway-outbound-section-title"
+        >
+          <div className="border-b border-border/60 px-3 py-2 sm:px-4 dark:border-border-dark/60">
+            <h4
+              id="gateway-outbound-section-title"
+              className="text-sm font-semibold text-ink dark:text-ink-dark"
+            >
+              <span className="mr-2 font-mono text-[10px] font-semibold uppercase tracking-wide text-ink-mute dark:text-ink-dark-mute">
+                {t("settings.gatewayServe.sectionOutboundBadge")}
+              </span>
+              {t("settings.gatewayServe.sectionOutboundTitle")}
+            </h4>
+            <p className="mt-0.5 text-[11px] leading-snug text-ink-mute dark:text-ink-dark-mute">
+              {t("settings.gatewayServe.sectionOutboundIntro")}
+            </p>
+          </div>
+          <div className="p-3 sm:p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-ink dark:text-ink-dark">
+              {t("settings.gatewayServe.dingtalkWebhookLabel")}
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border border-border bg-white px-2 py-1.5 font-mono text-sm text-ink shadow-sm dark:border-border-dark dark:bg-paper-dark dark:text-ink-dark"
+                value={dingtalkWebhook}
+                onChange={(e) => setSettings({ gatewayChannelDingtalkWebhook: e.target.value })}
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-medium text-ink dark:text-ink-dark">
+              {t("settings.gatewayServe.dingtalkSecretLabel")}
+              <input
+                type="password"
+                className="mt-1 w-full rounded-md border border-border bg-white px-2 py-1.5 font-mono text-sm text-ink shadow-sm dark:border-border-dark dark:bg-paper-dark dark:text-ink-dark"
+                value={dingtalkSecret}
+                onChange={(e) => setSettings({ gatewayChannelDingtalkSecret: e.target.value })}
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-medium text-ink dark:text-ink-dark">
+              {t("settings.gatewayServe.feishuWebhookLabel")}
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border border-border bg-white px-2 py-1.5 font-mono text-sm text-ink shadow-sm dark:border-border-dark dark:bg-paper-dark dark:text-ink-dark"
+                value={feishuWebhook}
+                onChange={(e) => setSettings({ gatewayChannelFeishuWebhook: e.target.value })}
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-medium text-ink dark:text-ink-dark">
+              {t("settings.gatewayServe.feishuSecretLabel")}
+              <input
+                type="password"
+                className="mt-1 w-full rounded-md border border-border bg-white px-2 py-1.5 font-mono text-sm text-ink shadow-sm dark:border-border-dark dark:bg-paper-dark dark:text-ink-dark"
+                value={feishuSecret}
+                onChange={(e) => setSettings({ gatewayChannelFeishuSecret: e.target.value })}
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-medium text-ink dark:text-ink-dark">
+              {t("settings.gatewayServe.telegramBotTokenLabel")}
+              <input
+                type="password"
+                className="mt-1 w-full rounded-md border border-border bg-white px-2 py-1.5 font-mono text-sm text-ink shadow-sm dark:border-border-dark dark:bg-paper-dark dark:text-ink-dark"
+                value={telegramBotToken}
+                onChange={(e) => setSettings({ gatewayChannelTelegramBotToken: e.target.value })}
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-medium text-ink dark:text-ink-dark">
+              {t("settings.gatewayServe.telegramChatIdLabel")}
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border border-border bg-white px-2 py-1.5 font-mono text-sm text-ink shadow-sm dark:border-border-dark dark:bg-paper-dark dark:text-ink-dark"
+                value={telegramChatId}
+                onChange={(e) => setSettings({ gatewayChannelTelegramChatId: e.target.value })}
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </label>
+          </div>
+          </div>
+        </div>
       </div>
     </section>
   );

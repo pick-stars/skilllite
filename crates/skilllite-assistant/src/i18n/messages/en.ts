@@ -593,7 +593,7 @@ export const enMessages: Record<string, string> = {
 
   "settings.gatewayServe.title": "Gateway (unified HTTP host)",
   "settings.gatewayServe.subtitle":
-    "Configure bind address, optional token, and optional artifact directory for `skilllite gateway serve`. You can start a locally managed gateway from this page, or still copy the CLI command for terminal/systemd supervision.",
+    "This page splits inbound (local gateway listener + health) from outbound (optional IM summaries after a successful inbound webhook). Start a managed process here or copy the shell command.",
   "settings.gatewayServe.bPatternNote":
     "Recommended: use `gateway serve` as the unified host for inbound webhook plus optional artifact HTTP; use this panel to start/stop the local managed process, inspect URLs, copy the external start command, and run a local health check.",
   "settings.gatewayServe.bindLabel": "Listen address (host:port)",
@@ -619,7 +619,7 @@ export const enMessages: Record<string, string> = {
   "settings.gatewayServe.managedLastError": "Last error: {msg}",
   "settings.gatewayServe.managedRecentLog": "Recent log: {msg}",
   "settings.gatewayServe.restartAfterChange":
-    "This managed gateway keeps the settings it started with. After editing bind, token, or artifact directory, stop and start it again to apply the new values.",
+    "This managed gateway keeps the settings it started with. After editing bind, token, artifact directory, or inbound notify fields (DingTalk / Feishu / Telegram) below, stop and start it again to apply the new values.",
   "settings.gatewayServe.startManaged": "Start here",
   "settings.gatewayServe.stopManaged": "Stop",
   "settings.gatewayServe.managedStarting": "Starting…",
@@ -647,6 +647,20 @@ export const enMessages: Record<string, string> = {
   "settings.gatewayServe.healthBadgeFail": "Unreachable",
   "settings.gatewayServe.webhookAuthHint":
     "When a token is set, the gateway applies the same `Authorization: Bearer <token>` to the mounted webhook and artifact HTTP routes. Token is stored locally like your API key — do not commit it.",
+  "settings.gatewayServe.sectionInboundBadge": "Inbound",
+  "settings.gatewayServe.sectionInboundTitle": "HTTP service (local listener)",
+  "settings.gatewayServe.sectionInboundIntro":
+    "Exposes `GET /health` and `POST /webhook/inbound`; optional artifact routes. Below: bind parameters and public URLs.",
+  "settings.gatewayServe.sectionOutboundBadge": "Outbound",
+  "settings.gatewayServe.sectionOutboundTitle": "IM notifications (triggered by inbound)",
+  "settings.gatewayServe.sectionOutboundIntro":
+    "After each accepted inbound webhook, optionally push a short summary to DingTalk / Feishu / Telegram. Persisted in this app’s localStorage; injected into the managed child on **Start here**.",
+  "settings.gatewayServe.dingtalkWebhookLabel": "DingTalk webhook URL",
+  "settings.gatewayServe.dingtalkSecretLabel": "DingTalk signing secret (optional)",
+  "settings.gatewayServe.feishuWebhookLabel": "Feishu / Lark webhook URL",
+  "settings.gatewayServe.feishuSecretLabel": "Feishu signing secret (optional)",
+  "settings.gatewayServe.telegramBotTokenLabel": "Telegram bot token",
+  "settings.gatewayServe.telegramChatIdLabel": "Telegram chat_id",
   "settings.gatewayServe.clipboardFail": "Could not copy to clipboard",
 
   "settings.evolutionIntro":

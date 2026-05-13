@@ -114,6 +114,18 @@ export interface Settings {
   gatewayServeToken?: string;
   /** 可选 artifact 目录；设置后 `gateway serve` 会挂载 artifact HTTP 路由。 */
   gatewayArtifactDir?: string;
+  /** 入站 webhook 摘要：钉钉 Webhook URL（`SKILLLITE_CHANNEL_DINGTALK_WEBHOOK`）。仅存本地。 */
+  gatewayChannelDingtalkWebhook?: string;
+  /** 钉钉加签密钥（`SKILLLITE_CHANNEL_DINGTALK_SECRET`）。 */
+  gatewayChannelDingtalkSecret?: string;
+  /** 飞书自定义机器人 Webhook（`SKILLLITE_CHANNEL_FEISHU_WEBHOOK`）。 */
+  gatewayChannelFeishuWebhook?: string;
+  /** 飞书签名校验密钥（`SKILLLITE_CHANNEL_FEISHU_SECRET`）。 */
+  gatewayChannelFeishuSecret?: string;
+  /** Telegram Bot token（`SKILLLITE_CHANNEL_TELEGRAM_BOT_TOKEN`）。 */
+  gatewayChannelTelegramBotToken?: string;
+  /** Telegram chat id（`SKILLLITE_CHANNEL_TELEGRAM_CHAT_ID`）。 */
+  gatewayChannelTelegramChatId?: string;
 }
 
 /** localStorage 键名；详情窗口与主窗口同步设置时需与此一致 */

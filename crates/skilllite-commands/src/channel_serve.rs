@@ -160,10 +160,7 @@ fn clamp_notify_body(s: &str) -> String {
     if s.chars().count() <= INBOUND_NOTIFY_MAX_CHARS {
         return s.to_string();
     }
-    s.chars()
-        .take(INBOUND_NOTIFY_MAX_CHARS)
-        .collect::<String>()
-        + "…"
+    s.chars().take(INBOUND_NOTIFY_MAX_CHARS).collect::<String>() + "…"
 }
 
 /// Best-effort outbound summaries (DingTalk / Feishu / Telegram); each reads its own env vars.
