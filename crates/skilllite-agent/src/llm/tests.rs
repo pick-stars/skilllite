@@ -269,6 +269,7 @@ fn test_estimate_messages_chars_sums_content_and_tool_calls() {
             }]),
             tool_call_id: None,
             name: None,
+            reasoning_content: None,
         },
         ChatMessage {
             role: "user".to_string(),
@@ -280,6 +281,7 @@ fn test_estimate_messages_chars_sums_content_and_tool_calls() {
             tool_calls: None,
             tool_call_id: None,
             name: None,
+            reasoning_content: None,
         },
     ];
     let n = estimate_messages_chars(&msgs);

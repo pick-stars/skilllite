@@ -74,6 +74,7 @@ pub async fn infer_entry_point_from_skill_md<L: EvolutionLlm>(
     let response = llm
         .complete(&messages, model, 0.0)
         .await?
+        .visible
         .trim()
         .to_string();
     let response_upper = response.to_uppercase();

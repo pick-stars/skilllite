@@ -137,6 +137,7 @@ async fn extract_rules_from_data<L: EvolutionLlm>(
     let content = llm
         .complete(&messages, model, 0.3)
         .await?
+        .visible
         .trim()
         .to_string();
 
@@ -341,6 +342,7 @@ async fn generate_examples_from_data<L: EvolutionLlm>(
     let content = llm
         .complete(&messages, model, 0.3)
         .await?
+        .visible
         .trim()
         .to_string();
 

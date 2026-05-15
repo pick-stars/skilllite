@@ -58,11 +58,8 @@ pub(super) async fn refine_loop<L: EvolutionLlm>(
             .replace("{{current_skill_md}}", "");
 
         let messages = vec![EvolutionMessage::user(&prompt)];
-        let content = llm
-            .complete(&messages, model, 0.3)
-            .await?
-            .trim()
-            .to_string();
+        let out = llm.complete(&messages, model, 0.3).await?;
+        let content = out.visible.trim().to_string();
 
         let parsed = match parse::parse_refinement_response(&content) {
             Ok(Some(r)) => {
@@ -90,9 +87,11 @@ pub(super) async fn refine_loop<L: EvolutionLlm>(
                     "你的输出无法解析为 JSON。错误: {}。请重新输出，严格遵循格式: {{\"fixed_script\": \"完整 Python 脚本\", \"fix_summary\": \"修正说明\", \"skip_reason\": \"若无法修正则说明原因\"}}。换行用 \\n 转义。",
                     e
                 );
-                let mut msgs = messages.to_vec();
-                msgs.push(EvolutionMessage::user(&retry_msg));
-                let content2 = llm.complete(&msgs, model, 0.3).await?.trim().to_string();
+                let mut history = messages.to_vec();
+                out.push_assistant_replay(&mut history);
+                history.push(EvolutionMessage::user(&retry_msg));
+                let out2 = llm.complete(&history, model, 0.3).await?;
+                let content2 = out2.visible.trim().to_string();
                 match parse::parse_refinement_response(&content2) {
                     Ok(Some(r)) => {
                         if r.fix_type != parse::FixType::Script || r.fixed_script.is_none() {

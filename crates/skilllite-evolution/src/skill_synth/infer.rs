@@ -270,8 +270,8 @@ pub(super) async fn infer_skill_execution<L: EvolutionLlm>(
         EvolutionMessage::system(SKILL_EXECUTION_INFERENCE_PROMPT),
         EvolutionMessage::user(&prompt),
     ];
-    let content = llm.complete(&messages, model, 0.0).await?;
-    let trimmed = content.trim();
+    let out1 = llm.complete(&messages, model, 0.0).await?;
+    let trimmed = out1.visible.trim();
 
     #[derive(serde::Deserialize)]
     struct InferResult {
@@ -302,9 +302,10 @@ pub(super) async fn infer_skill_execution<L: EvolutionLlm>(
             scripts_list
         );
         let mut msgs = messages.to_vec();
+        out1.push_assistant_replay(&mut msgs);
         msgs.push(EvolutionMessage::user(&retry_msg));
-        let content2 = llm.complete(&msgs, model, 0.0).await?;
-        parsed = try_parse_infer(content2.trim());
+        let out2 = llm.complete(&msgs, model, 0.0).await?;
+        parsed = try_parse_infer(out2.visible.trim());
     }
 
     let parsed: InferResult = match parsed {

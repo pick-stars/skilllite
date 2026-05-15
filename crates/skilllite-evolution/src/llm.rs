@@ -2,11 +2,35 @@
 
 use crate::Result;
 
+/// Result of a single non-streaming evolution LLM call.
+///
+/// `visible` is post-processed assistant text (legacy `String` semantics). Raw
+/// `assistant_*` fields must be echoed on the next request for thinking-mode
+/// providers (e.g. DeepSeek) when continuing the same chat.
+#[derive(Debug, Clone)]
+pub struct EvolutionLlmOutput {
+    pub visible: String,
+    pub assistant_content: Option<String>,
+    pub assistant_reasoning: Option<String>,
+}
+
+impl EvolutionLlmOutput {
+    /// Append this assistant turn before the next user/tool message in a multi-turn evolution call.
+    pub fn push_assistant_replay(&self, messages: &mut Vec<EvolutionMessage>) {
+        messages.push(EvolutionMessage::assistant_replay(
+            self.assistant_content.clone(),
+            self.assistant_reasoning.clone(),
+        ));
+    }
+}
+
 /// Minimal message format for evolution LLM calls (no tool calling).
 #[derive(Debug, Clone)]
 pub struct EvolutionMessage {
     pub role: String,
     pub content: Option<String>,
+    /// When `role` is `assistant`, echo verbatim on follow-up requests for thinking-mode APIs.
+    pub reasoning_content: Option<String>,
 }
 
 impl EvolutionMessage {
@@ -14,6 +38,7 @@ impl EvolutionMessage {
         Self {
             role: "user".to_string(),
             content: Some(content.to_string()),
+            reasoning_content: None,
         }
     }
 
@@ -21,6 +46,16 @@ impl EvolutionMessage {
         Self {
             role: "system".to_string(),
             content: Some(content.to_string()),
+            reasoning_content: None,
+        }
+    }
+
+    /// Prior assistant completion for multi-turn replays (must match the last API response).
+    pub fn assistant_replay(content: Option<String>, reasoning_content: Option<String>) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content,
+            reasoning_content,
         }
     }
 }
@@ -31,13 +66,13 @@ impl EvolutionMessage {
 /// for prompt learning, skill synthesis, and external knowledge extraction.
 #[async_trait::async_trait]
 pub trait EvolutionLlm: Send + Sync {
-    /// Non-streaming chat completion. Returns the assistant's text content.
+    /// Non-streaming chat completion.
     async fn complete(
         &self,
         messages: &[EvolutionMessage],
         model: &str,
         temperature: f64,
-    ) -> Result<String>;
+    ) -> Result<EvolutionLlmOutput>;
 }
 
 // ─── LLM response post-processing ────────────────────────────────────────────

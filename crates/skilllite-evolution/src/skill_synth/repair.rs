@@ -192,10 +192,11 @@ async fn llm_repair_call<L: EvolutionLlm>(
     messages: &[EvolutionMessage],
     error_trace: &str,
 ) -> Result<(Option<parse::RefinedSkill>, String)> {
-    let content = llm.complete(messages, model, 0.3).await?.trim().to_string();
-    let mut last_raw = content.clone();
+    let mut history = messages.to_vec();
+    let mut last = llm.complete(&history, model, 0.3).await?;
+    let mut last_raw = last.visible.trim().to_string();
 
-    match parse::parse_refinement_response(&content) {
+    match parse::parse_refinement_response(&last_raw) {
         Ok(Some(r)) => return Ok((Some(r), last_raw)),
         Ok(None) => {
             tracing::info!("Repair: model returned no fix or unfixable, will retry");
@@ -206,27 +207,27 @@ async fn llm_repair_call<L: EvolutionLlm>(
                 "你的输出无法解析为 JSON。错误: {}。请重新输出合法 JSON，包含 fix_summary 和至少一个修复字段（fixed_script / fix_test_input / fix_skill_md）。所有键名用双引号，换行用 \\n 转义。",
                 e
             );
-            let mut msgs = messages.to_vec();
-            msgs.push(EvolutionMessage::user(&retry_msg));
-            let content2 = llm.complete(&msgs, model, 0.3).await?.trim().to_string();
-            last_raw = content2.clone();
-            if let Ok(Some(r)) = parse::parse_refinement_response(&content2) {
+            last.push_assistant_replay(&mut history);
+            history.push(EvolutionMessage::user(&retry_msg));
+            last = llm.complete(&history, model, 0.3).await?;
+            last_raw = last.visible.trim().to_string();
+            if let Ok(Some(r)) = parse::parse_refinement_response(&last_raw) {
                 return Ok((Some(r), last_raw));
             }
         }
     }
 
     let err_brief: String = error_trace.lines().take(10).collect::<Vec<_>>().join("\n");
-    let mut msgs = messages.to_vec();
     for attempt in 1..=3 {
         let force_msg = format!(
             "【第{attempt}次强制要求】这个技能必须被修复，没有例外。\n\n错误：\n{err_brief}\n\n你必须输出一个合法的 JSON 对象，至少包含以下字段之一：\n- \"fix_test_input\": \"{{\\\"base\\\": 2, \\\"exponent\\\": 10}}\"  （注意：值是字符串，内容是 JSON）\n- \"fixed_script\": \"#!/usr/bin/env python3\\n...\"  （完整脚本内容）\n- \"fix_skill_md\": \"---\\nname: ...\\n---\\n...\"  （完整 SKILL.md）\n\n同时必须包含 \"fix_summary\": \"说明修了什么\"。\n\n示例输出：\n```json\n{{\"fix_summary\": \"补充测试输入\", \"fix_test_input\": \"{{\\\"base\\\": 2, \\\"exponent\\\": 10}}\", \"fixed_script\": null, \"fix_skill_md\": null}}\n```\n\n不要返回 unfixable。不要解释，直接输出 JSON。",
         );
-        msgs.push(EvolutionMessage::user(&force_msg));
-        let content_r = llm.complete(&msgs, model, 0.3).await?.trim().to_string();
-        last_raw = content_r.clone();
-        tracing::info!("Force retry {attempt}: raw len={}", content_r.len());
-        if let Ok(Some(r)) = parse::parse_refinement_response(&content_r) {
+        last.push_assistant_replay(&mut history);
+        history.push(EvolutionMessage::user(&force_msg));
+        last = llm.complete(&history, model, 0.3).await?;
+        last_raw = last.visible.trim().to_string();
+        tracing::info!("Force retry {attempt}: raw len={}", last_raw.len());
+        if let Ok(Some(r)) = parse::parse_refinement_response(&last_raw) {
             return Ok((Some(r), last_raw));
         }
     }

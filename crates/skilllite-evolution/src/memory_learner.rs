@@ -319,6 +319,7 @@ pub async fn evolve_memory<L: EvolutionLlm>(
     let content = llm
         .complete(&messages, model, 0.3)
         .await?
+        .visible
         .trim()
         .to_string();
 

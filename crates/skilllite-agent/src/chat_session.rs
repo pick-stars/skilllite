@@ -1350,6 +1350,7 @@ fn transcript_entry_to_message(entry: &transcript::TranscriptEntry) -> Option<Ch
                         tool_calls: None,
                         tool_call_id: None,
                         name: None,
+                        reasoning_content: None,
                     })
                 }
             } else {
@@ -1360,6 +1361,7 @@ fn transcript_entry_to_message(entry: &transcript::TranscriptEntry) -> Option<Ch
                     tool_calls: None,
                     tool_call_id: None,
                     name: None,
+                    reasoning_content: None,
                 })
             }
         }

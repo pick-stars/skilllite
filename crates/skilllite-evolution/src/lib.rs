@@ -42,7 +42,10 @@ pub use growth_schedule::{
     weighted_unprocessed_signal_sum, GrowthDueDiagnostics, GrowthDueOutcome, GrowthScheduleConfig,
 };
 pub use lifecycle::on_shutdown;
-pub use llm::{sanitize_visible_llm_text, strip_think_blocks, EvolutionLlm, EvolutionMessage};
+pub use llm::{
+    sanitize_visible_llm_text, strip_think_blocks, EvolutionLlm, EvolutionLlmOutput,
+    EvolutionMessage,
+};
 pub use rollback::check_auto_rollback;
 pub use run::{format_evolution_changes, query_changes_by_txn, run_evolution};
 pub use run_state::{finish_evolution, try_start_evolution, EvolutionRunResult};
@@ -94,8 +97,14 @@ mod lib_tests {
         let u = EvolutionMessage::user("u");
         assert_eq!(u.role, "user");
         assert_eq!(u.content.as_deref(), Some("u"));
+        assert!(u.reasoning_content.is_none());
         let sy = EvolutionMessage::system("s");
         assert_eq!(sy.role, "system");
+        assert!(sy.reasoning_content.is_none());
+        let a = EvolutionMessage::assistant_replay(Some("hi".into()), Some("think".into()));
+        assert_eq!(a.role, "assistant");
+        assert_eq!(a.content.as_deref(), Some("hi"));
+        assert_eq!(a.reasoning_content.as_deref(), Some("think"));
     }
 
     #[test]

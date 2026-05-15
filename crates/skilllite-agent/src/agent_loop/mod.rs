@@ -352,17 +352,30 @@ async fn run_simple_loop(
             .into_iter()
             .next()
             .ok_or_else(|| crate::Error::validation("No choices in LLM response"))?;
-        let assistant_content = choice.message.content;
-        let tool_calls = choice.message.tool_calls;
+        let msg = choice.message;
+        let reasoning_for_history = msg.reasoning_content.clone();
+        let assistant_content = msg.content;
+        let tool_calls = msg.tool_calls;
         let has_tool_calls = tool_calls.as_ref().is_some_and(|tc| !tc.is_empty());
 
         if let Some(tcs) = tool_calls {
-            messages.push(ChatMessage::assistant_with_tool_calls(
-                assistant_content.as_deref(),
-                tcs,
-            ));
+            let mut m = ChatMessage::assistant_with_tool_calls(assistant_content.as_deref(), tcs);
+            m.reasoning_content = reasoning_for_history;
+            messages.push(m);
         } else if let Some(ref content) = assistant_content {
-            messages.push(ChatMessage::assistant(content));
+            let mut m = ChatMessage::assistant(content);
+            m.reasoning_content = reasoning_for_history;
+            messages.push(m);
+        } else if reasoning_for_history.is_some() {
+            messages.push(ChatMessage {
+                role: "assistant".to_string(),
+                content: None,
+                images: None,
+                tool_calls: None,
+                tool_call_id: None,
+                name: None,
+                reasoning_content: reasoning_for_history,
+            });
         }
 
         // ── Reflection phase (no tool calls) ─────────────────────────────
@@ -675,8 +688,10 @@ async fn run_with_task_planning(
             .into_iter()
             .next()
             .ok_or_else(|| crate::Error::validation("No choices in LLM response"))?;
-        let mut assistant_content = choice.message.content;
-        let tool_calls = choice.message.tool_calls;
+        let msg = choice.message;
+        let reasoning_for_history = msg.reasoning_content.clone();
+        let mut assistant_content = msg.content;
+        let tool_calls = msg.tool_calls;
         let has_tool_calls = tool_calls.as_ref().is_some_and(|tc| !tc.is_empty());
 
         if pending_closing_user_reply && has_tool_calls {
@@ -703,12 +718,23 @@ async fn run_with_task_planning(
         }
 
         if let Some(tcs) = tool_calls {
-            messages.push(ChatMessage::assistant_with_tool_calls(
-                assistant_content.as_deref(),
-                tcs,
-            ));
+            let mut m = ChatMessage::assistant_with_tool_calls(assistant_content.as_deref(), tcs);
+            m.reasoning_content = reasoning_for_history;
+            messages.push(m);
         } else if let Some(ref content) = assistant_content {
-            messages.push(ChatMessage::assistant(content));
+            let mut m = ChatMessage::assistant(content);
+            m.reasoning_content = reasoning_for_history;
+            messages.push(m);
+        } else if reasoning_for_history.is_some() {
+            messages.push(ChatMessage {
+                role: "assistant".to_string(),
+                content: None,
+                images: None,
+                tool_calls: None,
+                tool_call_id: None,
+                name: None,
+                reasoning_content: reasoning_for_history,
+            });
         }
 
         if suppress_stream && has_tool_calls {

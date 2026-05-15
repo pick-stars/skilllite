@@ -382,6 +382,7 @@ pub fn estimate_messages_chars(messages: &[ChatMessage]) -> usize {
 
 fn message_estimated_chars(m: &ChatMessage) -> usize {
     let mut n = m.content.as_deref().map(str::len).unwrap_or(0);
+    n = n.saturating_add(m.reasoning_content.as_deref().map(str::len).unwrap_or(0));
     if let Some(calls) = &m.tool_calls {
         for c in calls {
             n = n.saturating_add(c.id.len());

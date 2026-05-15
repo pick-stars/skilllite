@@ -41,7 +41,7 @@ pub(super) async fn check_skill_md_completeness<L: EvolutionLlm>(
     let messages = vec![EvolutionMessage::user(&prompt)];
     match llm.complete(&messages, model, 0.0).await {
         Ok(response) => {
-            let trimmed = response.trim();
+            let trimmed = response.visible.trim();
             if let Some(json_str) = infer::extract_first_json_object(trimmed) {
                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_str) {
                     let complete = parsed

@@ -4,7 +4,7 @@
 //! LLM client for evolution operations.
 
 use skilllite_evolution::feedback::{DecisionInput, FeedbackSignal as EvolutionFeedbackSignal};
-use skilllite_evolution::{strip_think_blocks, EvolutionLlm, EvolutionMessage};
+use skilllite_evolution::{strip_think_blocks, EvolutionLlm, EvolutionLlmOutput, EvolutionMessage};
 
 use super::llm::LlmClient;
 use super::types::{ChatMessage, ExecutionFeedback, FeedbackSignal, TaskCompletionType};
@@ -21,7 +21,7 @@ impl EvolutionLlm for EvolutionLlmAdapter<'_> {
         messages: &[EvolutionMessage],
         model: &str,
         temperature: f64,
-    ) -> skilllite_evolution::Result<String> {
+    ) -> skilllite_evolution::Result<EvolutionLlmOutput> {
         let chat_messages: Vec<ChatMessage> = messages
             .iter()
             .map(|m| ChatMessage {
@@ -31,6 +31,7 @@ impl EvolutionLlm for EvolutionLlmAdapter<'_> {
                 tool_calls: None,
                 tool_call_id: None,
                 name: None,
+                reasoning_content: m.reasoning_content.clone(),
             })
             .collect();
 
@@ -41,16 +42,24 @@ impl EvolutionLlm for EvolutionLlmAdapter<'_> {
             .map_err(anyhow::Error::from)?;
 
         let msg = response.choices.first().map(|c| &c.message);
-        let content = msg.and_then(|m| m.content.as_deref()).unwrap_or("").trim();
-        let has_reasoning_field = msg.and_then(|m| m.reasoning_content.as_ref()).is_some();
+        let assistant_content = msg.and_then(|m| m.content.clone());
+        let assistant_reasoning = msg.and_then(|m| m.reasoning_content.clone());
+        let has_reasoning_field = assistant_reasoning.is_some();
 
-        if has_reasoning_field {
-            // API already separated reasoning from content — use content as-is
-            Ok(content.to_string())
-        } else {
-            // Fallback: strip <think>/<thinking>/<reasoning> tags from text
-            Ok(strip_think_blocks(content).to_string())
-        }
+        let visible = {
+            let content = assistant_content.as_deref().unwrap_or("").trim();
+            if has_reasoning_field {
+                content.to_string()
+            } else {
+                strip_think_blocks(content).to_string()
+            }
+        };
+
+        Ok(EvolutionLlmOutput {
+            visible,
+            assistant_content,
+            assistant_reasoning,
+        })
     }
 }
 

@@ -114,36 +114,40 @@ pub(super) async fn parse_skill_generation_with_retry<L: EvolutionLlm>(
     model: &str,
     messages: &[EvolutionMessage],
 ) -> Result<Option<GeneratedSkill>> {
-    let content = llm.complete(messages, model, 0.3).await?.trim().to_string();
-    match parse_skill_generation_response(&content) {
+    let mut history = messages.to_vec();
+    let mut last = llm.complete(&history, model, 0.3).await?;
+
+    match parse_skill_generation_response(&last.visible.trim()) {
         ok @ Ok(_) => ok,
         Err(e) => {
+            let mut last_err = e;
             for attempt in 0..MAX_PARSE_RETRIES {
                 tracing::info!(
                     "Skill generation JSON parse failed (attempt {}), retrying with LLM feedback: {}",
                     attempt + 1,
-                    e
+                    last_err
                 );
                 let retry_msg = format!(
                     "你的上一次输出无法解析为 JSON。错误: {}。\n\n请重新输出完整、合法的 JSON。确保 script_content 和 skill_md_content 中的字符串正确转义：换行用 \\n，制表符用 \\t，双引号用 \\\"。",
-                    e
+                    last_err
                 );
-                let mut msgs = messages.to_vec();
-                msgs.push(EvolutionMessage::user(&retry_msg));
-                let content2 = llm.complete(&msgs, model, 0.3).await?.trim().to_string();
-                match parse_skill_generation_response(&content2) {
+                last.push_assistant_replay(&mut history);
+                history.push(EvolutionMessage::user(&retry_msg));
+                last = llm.complete(&history, model, 0.3).await?;
+                match parse_skill_generation_response(&last.visible.trim()) {
                     ok @ Ok(_) => return ok,
                     Err(e2) => {
+                        last_err = e2;
                         if attempt == MAX_PARSE_RETRIES - 1 {
                             return Err(crate::Error::validation(format!(
                                 "Parse retry failed: {}",
-                                e2
+                                last_err
                             )));
                         }
                     }
                 }
             }
-            Err(e)
+            Err(last_err)
         }
     }
 }

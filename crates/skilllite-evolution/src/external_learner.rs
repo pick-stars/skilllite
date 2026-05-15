@@ -356,6 +356,7 @@ async fn extract_rules_from_content<L: EvolutionLlm>(
     let content = llm
         .complete(&messages, model, 0.3)
         .await?
+        .visible
         .trim()
         .to_string();
 
