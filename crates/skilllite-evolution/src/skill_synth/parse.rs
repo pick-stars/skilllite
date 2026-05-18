@@ -117,7 +117,7 @@ pub(super) async fn parse_skill_generation_with_retry<L: EvolutionLlm>(
     let mut history = messages.to_vec();
     let mut last = llm.complete(&history, model, 0.3).await?;
 
-    match parse_skill_generation_response(&last.visible.trim()) {
+    match parse_skill_generation_response(last.visible.trim()) {
         ok @ Ok(_) => ok,
         Err(e) => {
             let mut last_err = e;
@@ -134,7 +134,7 @@ pub(super) async fn parse_skill_generation_with_retry<L: EvolutionLlm>(
                 last.push_assistant_replay(&mut history);
                 history.push(EvolutionMessage::user(&retry_msg));
                 last = llm.complete(&history, model, 0.3).await?;
-                match parse_skill_generation_response(&last.visible.trim()) {
+                match parse_skill_generation_response(last.visible.trim()) {
                     ok @ Ok(_) => return ok,
                     Err(e2) => {
                         last_err = e2;
