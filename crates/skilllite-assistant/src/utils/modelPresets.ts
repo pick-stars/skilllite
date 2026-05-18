@@ -29,6 +29,8 @@ export const API_MODEL_PRESETS: ModelPreset[] = [
   },
   { value: "deepseek-chat", label: "DeepSeek Chat", apiBase: "https://api.deepseek.com/v1" },
   { value: "deepseek-reasoner", label: "DeepSeek Reasoner", apiBase: "https://api.deepseek.com/v1" },
+  { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro", apiBase: "https://api.deepseek.com/v1" },
+  { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash", apiBase: "https://api.deepseek.com/v1" },
   {
     value: "qwen-plus",
     label: "Qwen Plus",
