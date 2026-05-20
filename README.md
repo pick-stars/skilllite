@@ -25,13 +25,15 @@
 
 ### Pick your path
 
-One repository ships **several entry points**. Each row links to the **English** hub; **[中文](./docs/zh/START_PATHS.md)** is linked at the top of that page if you prefer it.
+**Default (recommended):** [`pip install skilllite`](https://pypi.org/project/skilllite/) → OS-level **sandbox** + **MCP** in Cursor, Claude Desktop, OpenCode, or your own agent. You do **not** need the desktop app or the full SkillLite agent loop to get the core value.
+
+One repository ships several entry points. Each row links to the **English** hub; **[中文](./docs/zh/START_PATHS.md)** is on that page if you prefer it.
 
 | Goal | First stop |
 |------|------------|
-| **Desktop GUI** — local assistant, skills, optional IDE layout | [Path 1 — Desktop](./docs/en/START_PATHS.md#path-1-desktop) |
-| **Sandbox / MCP** — isolated skills in Cursor, OpenCode, or your own stack | [Path 2 — Sandbox & MCP](./docs/en/START_PATHS.md#path-2-sandbox-mcp) |
-| **Full stack** — `skilllite` CLI, Python SDK, evolution | [Path 3 — Full stack](./docs/en/START_PATHS.md#path-3-fullstack) |
+| **Sandbox & MCP** (recommended) — secure skills in an existing IDE or agent | [Path 2 — Sandbox & MCP](./docs/en/START_PATHS.md#path-2-sandbox-mcp) |
+| **Full stack** — `skilllite` CLI, Python SDK, evolution, optional Swarm | [Path 3 — Full stack](./docs/en/START_PATHS.md#path-3-fullstack) |
+| **Desktop GUI** (optional) — SkillLite Assistant: local chat, evolution UI, IDE layout | [Path 1 — Desktop](./docs/en/START_PATHS.md#path-1-desktop) |
 
 ---
 
@@ -262,6 +264,18 @@ skilllite init        # sandbox binary + skills/ + download skills
 skilllite list        # verify installation
 ```
 
+### MCP in your IDE (recommended integration)
+
+Use SkillLite as a **sandbox + MCP server** inside an agent you already run (Cursor, Claude Desktop, OpenCode, etc.):
+
+```bash
+pip install "skilllite[mcp]"   # if your platform needs MCP extras
+skilllite init
+skilllite mcp                  # stdio MCP server for the IDE
+```
+
+Wire the host: **`skilllite init-cursor`** · **`skilllite init-opencode`**. Step-by-step: [Path 2 — Sandbox & MCP](./docs/en/START_PATHS.md#path-2-sandbox-mcp) · [MCP tutorial](./tutorials/06_mcp_server).
+
 **Zero-config quick start** (auto-detect LLM, setup skills, launch chat):
 
 ```bash
@@ -317,7 +331,9 @@ cp .env.example .env   # Edit: BASE_URL, API_KEY, MODEL
 
 ## Evolution Arena (Evotown)
 
-[Evotown](./evotown/) is an evolution testing platform that puts evolution engines (e.g. SkillLite) in a controlled environment for **evolution effect validation**.
+**Repository:** [github.com/EXboys/evotown](https://github.com/EXboys/evotown) — evolution testing platform for **evolution effect validation**; any engine that can run under your harness and **report into Evotown** (HTTP ingest) works — [SkillLite](https://github.com/EXboys/skilllite) is a common option, not a requirement. A local clone for combined development may live at [`./evotown/`](./evotown/) (often gitignored in minimal checkouts).
+
+**Engine integration (draft):** independent runners push results **into** Evotown over HTTP. **Canonical docs** on Evotown: [ingest API v0.1](https://github.com/EXboys/evotown/blob/main/docs/en/EVOTOWN-ENGINE-INGEST-V0.1.md) · [OpenAPI](https://github.com/EXboys/evotown/blob/main/docs/openapi/evotown-engine-ingest-v0.1.yaml). **Mirror in this repo** (SkillLite contributors): [English](./docs/en/EVOTOWN-ENGINE-INGEST-V0.1.md) · [中文](./docs/zh/EVOTOWN-ENGINE-INGEST-V0.1.md) · [OpenAPI](./docs/openapi/evotown-engine-ingest-v0.1.yaml).
 
 ![Evotown — Evolution Arena](./docs/images/Evotown.png)
 
@@ -571,9 +587,11 @@ The `init-opencode` command automatically detects the best way to start the MCP 
 </details>
 
 <details>
-<summary>Desktop Assistant (skilllite-assistant)</summary>
+<summary>Desktop Assistant (skilllite-assistant) — optional</summary>
 
-**SkillLite Assistant** is the native **desktop app** (Tauri 2 + React) on top of the same **`skilllite`** engine (`agent-rpc`). **Installers** (dmg / msi / AppImage) ship on [GitHub Releases](https://github.com/EXboys/skilllite/releases) (desktop builds may appear shortly after the main release artifacts). First-time orientation: [Pick your path → Desktop](./docs/en/START_PATHS.md#path-1-desktop). In the skills side panel, you can now either paste a source or choose a local ZIP package via the native file picker, the list shows installed skills even when they are bash-tool or other non-script packages, and each skill row surfaces type / trust / dependency hints.
+**Optional** official GUI — not required if you only need sandbox/MCP in another IDE or agent.
+
+**SkillLite Assistant** is the native **desktop app** (Tauri 2 + React) on top of the same **`skilllite`** engine (`agent-rpc`). **Installers** (dmg / msi / AppImage) ship on [GitHub Releases](https://github.com/EXboys/skilllite/releases) (desktop builds may appear shortly after the main release artifacts). Optional GUI — see [Pick your path → Desktop](./docs/en/START_PATHS.md#path-1-desktop) if you want the assistant app instead of MCP-only integration. In the skills side panel, you can now either paste a source or choose a local ZIP package via the native file picker, the list shows installed skills even when they are bash-tool or other non-script packages, and each skill row surfaces type / trust / dependency hints.
 
 
 ![SkillLite Assistant — Settings, Model & API tab](./docs/images/assistant-settings-model-api.png)
@@ -619,7 +637,7 @@ MIT — See [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md) for third-party
 
 ## 📚 Documentation
 
-- [Pick your path](./docs/en/START_PATHS.md) — Desktop vs sandbox/MCP vs full stack (start here if unsure)
+- [Pick your path](./docs/en/START_PATHS.md) — Sandbox/MCP (recommended) vs full stack vs optional desktop
 - [Getting Started](./docs/en/GETTING_STARTED.md) — Installation and quick start guide
 - [Channel and Gateway](./docs/en/GUIDE_CHANNEL_GATEWAY.md) — Inbound webhook, `SKILLLITE_CHANNEL_*`, Assistant (EN); [中文](./docs/zh/GUIDE_CHANNEL_GATEWAY.md)
 - [Changelog](./CHANGELOG.md) — Version history and upgrade notes
