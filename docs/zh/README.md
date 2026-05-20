@@ -2,7 +2,13 @@
 
 [English](../../README.md)
 
-**不知道该从哪开始？** 同一仓库提供多种入口，请先读 **[选择你的路径](./START_PATHS.md)**（桌面 / 沙箱与 MCP / 全栈），再读下文长文档。
+**不知道该从哪开始？** **默认推荐：** [`pip install skilllite`](https://pypi.org/project/skilllite/) → **沙箱 + MCP**（Cursor、Claude Desktop、OpenCode 或自研 Agent），不必先装桌面应用。分流说明见 **[选择你的路径](./START_PATHS.md)**，再读下文长文档。
+
+| 目标 | 从这里开始 |
+|------|------------|
+| **沙箱与 MCP**（推荐）— 在已有 IDE/Agent 里安全执行 Skill | [路径 2 — 沙箱与 MCP](./START_PATHS.md#path-2-sandbox-mcp) |
+| **全栈** — CLI、Python SDK、进化、可选 Swarm | [路径 3 — 全栈](./START_PATHS.md#path-3-fullstack) |
+| **桌面 GUI**（可选）— SkillLite Assistant | [路径 1 — 桌面](./START_PATHS.md#path-1-desktop) |
 
 **越用越强的 AI Agent 引擎——在安全沙箱约束下自进化。**
 
@@ -222,6 +228,18 @@ skilllite init        # 沙箱二进制 + skills/ + 下载 skills
 skilllite list        # 验证安装
 ```
 
+### 在 IDE 里接 MCP（推荐集成方式）
+
+把 SkillLite 当作 **沙箱 + MCP 服务** 接到你已在用的 Agent 上：
+
+```bash
+pip install "skilllite[mcp]"   # 部分环境需要 MCP 额外依赖
+skilllite init
+skilllite mcp                  # 给 IDE 用的 stdio MCP 服务
+```
+
+接入宿主：**`skilllite init-cursor`** · **`skilllite init-opencode`**。分步说明：[路径 2 — 沙箱与 MCP](./START_PATHS.md#path-2-sandbox-mcp) · [MCP 教程](../../tutorials/06_mcp_server)。
+
 **零配置快速开始**（自动检测 LLM、配置 skills、启动对话）：
 
 ```bash
@@ -268,6 +286,14 @@ cp .env.example .env   # 编辑: BASE_URL, API_KEY, MODEL
 | [07. OpenCode 集成](../../tutorials/07_opencode_integration) | 10 分钟 | 一键 OpenCode 集成 |
 
 👉 **[查看全部教程](../../tutorials/README.md)**
+
+---
+
+## Evotown（进化竞技场）
+
+**仓库：** [github.com/EXboys/evotown](https://github.com/EXboys/evotown)。规范正文以 Evotown 仓库为准：[中文 ingest v0.1](https://github.com/EXboys/evotown/blob/main/docs/zh-CN/EVOTOWN-ENGINE-INGEST-V0.1.md) · [OpenAPI](https://github.com/EXboys/evotown/blob/main/docs/openapi/evotown-engine-ingest-v0.1.yaml)。根目录说明见 [README — Evotown](../../README.md#evolution-arena-evotown)。
+
+**本仓库镜像（贡献者）：** [EVOTOWN-ENGINE-INGEST-V0.1.md](./EVOTOWN-ENGINE-INGEST-V0.1.md) · [OpenAPI](../../docs/openapi/evotown-engine-ingest-v0.1.yaml)。
 
 ---
 
@@ -508,9 +534,11 @@ opencode
 </details>
 
 <details>
-<summary>桌面助手（skilllite-assistant）</summary>
+<summary>桌面助手（skilllite-assistant）— 可选</summary>
 
-**SkillLite Assistant** 是本机 **桌面应用**（Tauri 2 + React），底层仍是同一套 **`skilllite`** 引擎（`agent-rpc`）。**安装包**（dmg / msi / AppImage）见 [GitHub Releases](https://github.com/EXboys/skilllite/releases)（桌面构建可能比主产物稍晚出现）。首次分流说明：[选择你的路径 → 桌面](./START_PATHS.md#path-1-desktop)。现在在技能侧栏里，既可以粘贴来源，也可以通过原生文件选择器直接导入本地 ZIP 技能包；技能列表也会显示已安装的 bash-tool 等非脚本技能包，并展示类型、信任和依赖提示。
+**可选**官方图形客户端 — 若你只需在其它 IDE/Agent 里用沙箱与 MCP，不必安装。
+
+**SkillLite Assistant** 是本机 **桌面应用**（Tauri 2 + React），底层仍是同一套 **`skilllite`** 引擎（`agent-rpc`）。**安装包**（dmg / msi / AppImage）见 [GitHub Releases](https://github.com/EXboys/skilllite/releases)（桌面构建可能比主产物稍晚出现）。可选图形客户端 — 若需要助手应用而非仅 MCP 集成，见 [选择你的路径 → 桌面](./START_PATHS.md#path-1-desktop)。现在在技能侧栏里，既可以粘贴来源，也可以通过原生文件选择器直接导入本地 ZIP 技能包；技能列表也会显示已安装的 bash-tool 等非脚本技能包，并展示类型、信任和依赖提示。
 
 **设置**（齿轮）：**模型与 API**（界面语言、服务商、API Key、模型、可选 Base URL、Token 统计等）、**工作区与沙箱**、**Agent 预算**、**自进化**、**定时任务**、**卸载与数据**。
 
@@ -557,7 +585,7 @@ MIT — 第三方依赖详见 [THIRD_PARTY_LICENSES.md](../../THIRD_PARTY_LICENS
 
 ## 📚 文档
 
-- [选择你的路径](./START_PATHS.md) — 按目标分流（桌面 / MCP / 全栈）
+- [选择你的路径](./START_PATHS.md) — 沙箱/MCP（推荐）/ 全栈 / 可选桌面
 - [快速入门](./GETTING_STARTED.md) — 安装和快速入门指南
 - [Channel 与 Gateway 配置指南](./GUIDE_CHANNEL_GATEWAY.md) — Webhook 入站、`SKILLLITE_CHANNEL_*` 摘要与桌面助手流程（含案例与流程图）
 - [更新日志](../../CHANGELOG.md) — 版本历史与升级说明

@@ -1,6 +1,6 @@
 # Getting Started
 
-> **Unsure where to begin?** This page is the **full-stack** path (pip + `skilllite` CLI + Python). If you want the **desktop app** or **sandbox/MCP only** first, read [Pick your path](./START_PATHS.md).
+> **Unsure where to begin?** **Most integrators start with [Path 2 — Sandbox & MCP](./START_PATHS.md#path-2-sandbox-mcp)** (`pip install skilllite` → `skilllite init` → `skilllite mcp`). This page is the **full-stack** path (CLI + Python + evolution). The **desktop app** is optional: [Path 1 — Desktop](./START_PATHS.md#path-1-desktop).
 
 ## Installation
 
