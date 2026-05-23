@@ -638,6 +638,7 @@ MIT — See [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md) for third-party
 ## 📚 Documentation
 
 - [Pick your path](./docs/en/START_PATHS.md) — Sandbox/MCP (recommended) vs full stack vs optional desktop
+- [Assistant split architecture](./docs/en/ASSISTANT-SPLIT-ARCHITECTURE.md) — How the desktop app can live in its own repo (L1/L2/L3, migration phases)
 - [Getting Started](./docs/en/GETTING_STARTED.md) — Installation and quick start guide
 - [Channel and Gateway](./docs/en/GUIDE_CHANNEL_GATEWAY.md) — Inbound webhook, `SKILLLITE_CHANNEL_*`, Assistant (EN); [中文](./docs/zh/GUIDE_CHANNEL_GATEWAY.md)
 - [Changelog](./CHANGELOG.md) — Version history and upgrade notes

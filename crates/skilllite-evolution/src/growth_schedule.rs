@@ -120,7 +120,7 @@ pub fn signal_burst_due(conn: &Connection, cfg: &GrowthScheduleConfig) -> Result
 }
 
 /// Read-only A9 breakdown for UI / ops (does **not** advance the periodic anchor).
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct GrowthDueDiagnostics {
     pub min_run_gap_secs: u64,
     pub min_run_gap_blocked: bool,

@@ -47,15 +47,18 @@
 
 ## 4. Desktop（skilllite-assistant）
 
-- **入口定级**：**一等入口**（Phase 0 D1，2026-04-20 决议）。架构规则、依赖策略（`deny.toml`）、CI 检查（`cargo deny check bans` 除 root workspace 外，**也对该 manifest 单独执行一次**）、文档与测试策略均与 CLI 同级；Desktop **不再被视为「外部二进制的薄壳」**。
-- **入口**：Tauri 应用 `skilllite-assistant`。使用单独的 Cargo manifest（`crates/skilllite-assistant/src-tauri/Cargo.toml`），因 Tauri 在 Linux 上需要 glib/GTK 等平台 GUI 工具链，故被 root workspace 排除。构建命令：`cargo build --manifest-path crates/skilllite-assistant/src-tauri/Cargo.toml`，或在 `crates/skilllite-assistant/` 下 `npm run tauri build`。
-- **依赖**：
-  - **编译时（直接 path 依赖）**：`skilllite-core`、`skilllite-fs`、`skilllite-sandbox`、`skilllite-agent`、`skilllite-evolution`。
-  - **运行时回退**：部分命令（如 `agent-rpc` 子进程）仍由 bridge 启动已安装的 `skilllite` 二进制，参见 `crates/skilllite-assistant/README.md`。这是**运行时便利**，不是编译时硬依赖。
-- **能力**：图形化聊天、会话管理、自进化审核与触发、运行时探测/供给、transcript/memory/输出视图、IDE 三栏布局、附图发往多模态 `agent_chat`。
-- **聊天输入**：`Enter` 发送；`Shift+Enter` 换行；**输入法组合输入（未上屏）**时回车交给输入法确认选词，不会发送。
-- **适用**：不想写命令行的桌面用户、需要常驻托盘与快捷方式的场景。
-- **边界策略**：当前对 `skilllite-{agent,sandbox,evolution}` 的直接依赖在 `deny.toml` 中显式列入 wrapper 白名单。Phase 1+ 会逐步把共享流程迁到 `skilllite-services` crate；现有直接依赖在迁移期间继续允许。把 Desktop 退回「壳」定位需要显式推翻 D1 决议。
+- **产品角色**：引擎的**可选 GUI 分发**，不是默认对接路径（默认见 [路径 2 — 沙箱与 MCP](./START_PATHS.md#path-2-sandbox-mcp)）。契约就绪后可迁入**独立仓库**（[Assistant 可拆仓架构](./ASSISTANT-SPLIT-ARCHITECTURE.md)）。
+- **入口（现状）**：`crates/skilllite-assistant/` 下的 Tauri 应用；单独 Cargo manifest（因 GUI 工具链未纳入 root workspace）。在该目录执行 `npm run tauri build`。
+- **集成模型（目标）** — 仅三层：
+  - **L1** `skilllite agent-rpc` — 流式聊天、确认/澄清（已用）。
+  - **L2** `skilllite … --json` — 进化面板、运行时安装、技能列表（待补，见拆仓文档 §5.2）。
+  - **L3** 工作区文件 — prompts/transcript 等允许路径的读写。
+- **依赖（现状 vs 目标）**：
+  - **现状**：path 依赖 `skilllite-core`、`skilllite-fs`、`skilllite-sandbox`、`skilllite-agent`、`skilllite-evolution`（`deny.toml` 白名单；历史 D1，2026-04-20）。
+  - **目标（D1′）**：**不再** path 依赖引擎 crate；仅 semver 钉扎的 **`skilllite` 二进制**（+ 可选 `skilllite-client` 类型 crate）。
+- **能力**：图形聊天、会话、进化审核/触发、运行时安装、IDE 三栏、多模态 `agent_chat`。
+- **适用**：不想在 IDE 里配 MCP、需要本机 App/托盘的用户。
+- **迁移**：P0 文档 → P1 引擎 `--json` → P2 monorepo 内 bridge 变薄 → P4 拆仓（[检查清单](./ASSISTANT-SPLIT-ARCHITECTURE.md#12-拆仓前检查清单)）。
 
 ---
 

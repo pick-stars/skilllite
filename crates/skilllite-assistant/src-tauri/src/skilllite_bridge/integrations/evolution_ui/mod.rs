@@ -1,7 +1,7 @@
 //! 进化反馈库、生长调度、待审核技能与 `run_evolution` / 后台 `evolution run` 触发（桌面 UI 数据源）。
 //!
 //! 子模块：`config`（合并后的环境与阈值）、`growth`（Life Pulse）、`status`（状态载荷）、
-//! `pending`（待审核技能）、`authorize`（能力进化授权）、`backlog`（队列行）、`trigger`（进程内 run）。
+//! `pending`（待审核技能）、`authorize`（能力进化授权）、`backlog`（队列行）、`trigger`（CLI run）。
 
 mod authorize;
 mod backlog;

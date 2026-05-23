@@ -4,7 +4,7 @@
   "version": "0.1.29",
   "identifier": "com.skilllite.assistant",
   "build": {
-    "beforeDevCommand": "bash scripts/prebuild-skilllite.sh && npm run dev",
+    "beforeDevCommand": "bash scripts/dev-tauri.sh",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "bash scripts/prebuild-skilllite.sh && npm run build",
     "frontendDist": "../dist"

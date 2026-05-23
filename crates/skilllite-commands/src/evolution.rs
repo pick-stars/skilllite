@@ -3,6 +3,18 @@
 //! Provides `skilllite evolution {status,reset,disable,explain,run}` subcommands
 //! for inspecting, controlling, and debugging the self-evolution engine.
 
+pub use crate::evolution_desktop::{
+    confirm_pending_skill as desktop_confirm_pending_skill,
+    list_pending_skills as desktop_list_pending_skills, query_backlog_desktop,
+    query_proposal_status as desktop_query_proposal_status,
+    read_pending_skill_md as desktop_read_pending_skill_md,
+    reject_pending_skill as desktop_reject_pending_skill, EvolutionBacklogRowSnapshot,
+    EvolutionOpSnapshot, EvolutionProposalStatusSnapshot, PendingSkillSnapshot,
+};
+pub use crate::evolution_status::{
+    build_evolution_status_snapshot, cmd_status, EvolutionStatusParams, EvolutionStatusSnapshot,
+};
+
 use anyhow::Context;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -139,7 +151,19 @@ fn query_backlog_rows(
 }
 
 /// `skilllite evolution backlog` — query evolution backlog proposals.
-pub fn cmd_backlog(status: Option<&str>, risk: Option<&str>, limit: usize) -> Result<()> {
+pub fn cmd_backlog(
+    json: bool,
+    hide_closed: bool,
+    status: Option<&str>,
+    risk: Option<&str>,
+    limit: usize,
+) -> Result<()> {
+    if json && hide_closed {
+        let rows = query_backlog_desktop(limit)?;
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+        return Ok(());
+    }
+
     let root = paths::chat_root();
     let status_filter = normalize_status_filter(status)?;
     let risk_filter = normalize_risk_filter(risk)?;
@@ -149,6 +173,24 @@ pub fn cmd_backlog(status: Option<&str>, risk: Option<&str>, limit: usize) -> Re
         risk_filter.as_deref(),
         limit,
     )?;
+
+    if json {
+        let out: Vec<EvolutionBacklogRowSnapshot> = rows
+            .into_iter()
+            .map(|r| EvolutionBacklogRowSnapshot {
+                proposal_id: r.proposal_id,
+                source: r.source,
+                risk_level: r.risk_level,
+                status: r.status,
+                acceptance_status: r.acceptance_status,
+                roi_score: r.roi_score,
+                updated_at: r.updated_at,
+                note: r.note,
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&out)?);
+        return Ok(());
+    }
 
     println!(
         "╭────────────────────────────────────────────────────────────────────────────────────╮"
@@ -199,140 +241,6 @@ pub fn cmd_backlog(status: Option<&str>, risk: Option<&str>, limit: usize) -> Re
             pid, source, risk, status, accept, row.roi_score, updated, note
         );
     }
-    Ok(())
-}
-
-/// `skilllite evolution status` — show evolution statistics, effectiveness, trends.
-pub fn cmd_status() -> Result<()> {
-    let root = paths::chat_root();
-    let conn = skilllite_evolution::feedback::open_evolution_db(&root)?;
-    let mode = skilllite_evolution::EvolutionMode::from_env();
-
-    // Header
-    println!("╭─────────────────────────────────────────────╮");
-    println!("│       SkillLite 自进化引擎状态               │");
-    println!("╰─────────────────────────────────────────────╯");
-    println!();
-
-    // Mode
-    let mode_str = match &mode {
-        skilllite_evolution::EvolutionMode::All => "全部启用 ✅",
-        skilllite_evolution::EvolutionMode::PromptsOnly => "仅 Prompts",
-        skilllite_evolution::EvolutionMode::MemoryOnly => "仅 Memory",
-        skilllite_evolution::EvolutionMode::SkillsOnly => "仅 Skills",
-        skilllite_evolution::EvolutionMode::Disabled => "已禁用 ⏸️  (已有进化产物冻结生效中)",
-    };
-    println!("进化模式: {}", mode_str);
-    println!();
-
-    // Recent metrics trend
-    println!("📈 核心指标趋势 (最近 7 天)");
-    println!(
-        "  {:10} {:>8} {:>8} {:>8}",
-        "日期", "成功率", "Replan", "纠正率"
-    );
-    println!(
-        "  {:10} {:>8} {:>8} {:>8}",
-        "──────────", "────────", "────────", "────────"
-    );
-
-    let mut stmt = conn
-        .prepare(
-            "SELECT date, first_success_rate, avg_replans, user_correction_rate
-         FROM evolution_metrics
-         WHERE date > date('now', '-7 days') ORDER BY date DESC",
-        )
-        .map_err(|e| crate::Error::from(anyhow::Error::from(e)))?;
-    let metrics = stmt
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, f64>(1)?,
-                row.get::<_, f64>(2)?,
-                row.get::<_, f64>(3)?,
-            ))
-        })
-        .map_err(|e| crate::Error::from(anyhow::Error::from(e)))?;
-
-    let mut has_metrics = false;
-    for m in metrics {
-        let (date, fsr, avg_r, ucr) = m.map_err(|e| crate::Error::from(anyhow::Error::from(e)))?;
-        println!(
-            "  {:10} {:>7.0}% {:>8.1} {:>7.0}%",
-            date,
-            fsr * 100.0,
-            avg_r,
-            ucr * 100.0,
-        );
-        has_metrics = true;
-    }
-    if !has_metrics {
-        println!("  (暂无数据 — 需要更多使用后才会出现)");
-    }
-    if let Ok(Some(summary)) = skilllite_evolution::feedback::build_latest_judgement(&conn) {
-        println!(
-            "  — 当前简单判断: {} ({})",
-            summary.judgement.label_zh(),
-            summary.judgement.as_str()
-        );
-        println!("    原因: {}", summary.reason);
-    }
-    println!();
-
-    // Recent evolution events
-    println!("📜 最近进化事件");
-    let mut stmt = conn
-        .prepare(
-            "SELECT ts, type, target_id, reason FROM evolution_log
-         ORDER BY ts DESC LIMIT 10",
-        )
-        .map_err(|e| crate::Error::from(anyhow::Error::from(e)))?;
-    let events = stmt
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, Option<String>>(2)?,
-                row.get::<_, Option<String>>(3)?,
-            ))
-        })
-        .map_err(|e| crate::Error::from(anyhow::Error::from(e)))?;
-
-    let mut has_events = false;
-    for e in events {
-        let (ts, etype, target, reason) =
-            e.map_err(|e| crate::Error::from(anyhow::Error::from(e)))?;
-        let date = &ts[..std::cmp::min(16, ts.len())];
-        let target = target.unwrap_or_default();
-        let reason = reason.unwrap_or_default();
-        let icon = match etype.as_str() {
-            "rule_added" => "✅",
-            "example_added" => "📖",
-            "skill_generated" => "✨",
-            "skill_pending" => "🆕",
-            "skill_refined" => "🔧",
-            "evolution_judgement" => "🧭",
-            "auto_rollback" => "⚠️ ",
-            t if t.contains("retired") => "🗑️ ",
-            t if t.contains("rolled_back") => "🔙",
-            _ => "  ",
-        };
-        let reason_short = if reason.len() > 50 {
-            format!("{}...", &reason[..47])
-        } else {
-            reason
-        };
-        println!("  {} {} {} {}", icon, date, etype, reason_short);
-        if !target.is_empty() {
-            println!("     └─ target: {}", target);
-        }
-        has_events = true;
-    }
-    if !has_events {
-        println!("  (暂无进化事件)");
-    }
-    println!();
-
     Ok(())
 }
 
@@ -561,44 +469,96 @@ pub fn cmd_explain(rule_id: &str) -> Result<()> {
 }
 
 /// `skilllite evolution confirm <skill_name>` — move pending skill to confirmed (A10).
-/// Skills are project-level: moves from _pending to _evolved within workspace/.skills/.
-/// Logs skill_confirmed to evolution.log for EvoTown reward (human-approved = effective).
-pub fn cmd_confirm(skill_name: &str) -> Result<()> {
-    let skills_root = resolve_skills_root(None).ok_or_else(|| {
-        crate::Error::validation("无法解析工作区。请在项目目录运行或设置 SKILLLITE_WORKSPACE。")
-    })?;
-    skilllite_evolution::skill_synth::confirm_pending_skill(&skills_root, skill_name)?;
-    let root = paths::chat_root();
-    if let Ok(conn) = skilllite_evolution::feedback::open_evolution_db(&root) {
-        let _ = skilllite_evolution::log_evolution_event(
-            &conn,
-            &root,
-            "skill_confirmed",
-            skill_name,
-            "user confirmed",
-            "",
+pub fn cmd_confirm(json: bool, workspace: &str, skill_name: &str) -> Result<()> {
+    desktop_confirm_pending_skill(workspace, skill_name)?;
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&EvolutionOpSnapshot {
+                ok: true,
+                message: Some(format!("Skill '{}' confirmed", skill_name)),
+            })?
         );
+    } else {
+        println!("✅ Skill '{}' 已确认加入", skill_name);
     }
-    println!("✅ Skill '{}' 已确认加入", skill_name);
     Ok(())
 }
 
 /// `skilllite evolution reject <skill_name>` — remove pending skill without adding (A10).
-pub fn cmd_reject(skill_name: &str) -> Result<()> {
-    let skills_root = resolve_skills_root(None).ok_or_else(|| {
-        crate::Error::validation("无法解析工作区。请在项目目录运行或设置 SKILLLITE_WORKSPACE。")
-    })?;
-    skilllite_evolution::skill_synth::reject_pending_skill(&skills_root, skill_name)?;
-    println!("✅ Skill '{}' 已拒绝", skill_name);
+pub fn cmd_reject(json: bool, workspace: &str, skill_name: &str) -> Result<()> {
+    desktop_reject_pending_skill(workspace, skill_name)?;
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&EvolutionOpSnapshot {
+                ok: true,
+                message: Some(format!("Skill '{}' rejected", skill_name)),
+            })?
+        );
+    } else {
+        println!("✅ Skill '{}' 已拒绝", skill_name);
+    }
+    Ok(())
+}
+
+/// `skilllite evolution pending` — list pending evolved skills for desktop UI.
+pub fn cmd_pending(json: bool, workspace: &str) -> Result<()> {
+    let rows = desktop_list_pending_skills(workspace)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else if rows.is_empty() {
+        println!("(no pending skills)");
+    } else {
+        for row in rows {
+            println!("- {} (needs_review={})", row.name, row.needs_review);
+        }
+    }
+    Ok(())
+}
+
+/// `skilllite evolution proposal-status <proposal_id>` — single backlog row for desktop.
+pub fn cmd_proposal_status(json: bool, proposal_id: &str) -> Result<()> {
+    let row = desktop_query_proposal_status(proposal_id)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&row)?);
+    } else {
+        println!(
+            "{} status={} accept={} updated={}",
+            row.proposal_id, row.status, row.acceptance_status, row.updated_at
+        );
+        if let Some(note) = row.note.filter(|n| !n.is_empty()) {
+            println!("  note: {}", note);
+        }
+    }
     Ok(())
 }
 
 /// `skilllite evolution run` — run evolution once synchronously, output NodeResult with new_skill.
-/// Skills are written to workspace/.skills/_evolved/ (project-level).
-pub fn cmd_run(json_output: bool) -> Result<()> {
+pub fn cmd_run(
+    json_output: bool,
+    workspace: &str,
+    proposal_id: Option<&str>,
+    log_manual_trigger: bool,
+) -> Result<()> {
+    let ws_root = crate::evolution_status::resolve_workspace_root(workspace);
+    skilllite_core::config::load_dotenv_from_dir(&ws_root);
+    std::env::set_var(
+        skilllite_core::config::env_keys::paths::SKILLLITE_WORKSPACE,
+        ws_root.to_string_lossy().as_ref(),
+    );
+
     let root = paths::chat_root();
-    let skills_root = resolve_skills_root(None);
+    let skills_root = resolve_skills_root(Some(workspace));
     skilllite_core::config::ensure_default_output_dir();
+
+    let force_key = skilllite_core::config::env_keys::evolution::SKILLLITE_EVO_FORCE_PROPOSAL_ID;
+    let prev_force = std::env::var(force_key).ok();
+    if let Some(pid) = proposal_id.filter(|s| !s.trim().is_empty()) {
+        std::env::set_var(force_key, pid);
+    } else {
+        std::env::remove_var(force_key);
+    }
 
     let config = AgentConfig::from_env();
     if config.api_key.is_empty() {
@@ -695,6 +655,19 @@ pub fn cmd_run(json_output: bool) -> Result<()> {
             }
         }
     };
+
+    match prev_force {
+        Some(v) => std::env::set_var(force_key, v),
+        None => std::env::remove_var(force_key),
+    }
+
+    if log_manual_trigger {
+        let _ = crate::evolution_desktop::log_manual_evolution_trigger(
+            workspace,
+            proposal_id,
+            &response.response,
+        );
+    }
 
     if json_output {
         println!("{}", serde_json::to_string_pretty(&response)?);

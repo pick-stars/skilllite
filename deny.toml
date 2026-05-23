@@ -7,8 +7,8 @@
 # Layering rules track `spec/architecture-boundaries.md`:
 # entry (skilllite, skilllite-assistant) -> commands/agent -> executor -> sandbox -> core.
 #
-# Desktop note (Phase 0, D1 + D4, 2026-04-20; rollback 2026-04-20 TASK-2026-045):
-# `skilllite-assistant` (Tauri) is a first-class entry and consumes
+# Desktop note (D1, 2026-04-20; rollback TASK-2026-045 — no skilllite-services yet):
+# Today: `skilllite-assistant` is allow-listed and consumes
 # `skilllite-{agent,sandbox,evolution}` directly; it is listed as an allowed
 # wrapper for those denied crates. The earlier `skilllite-services` shared
 # layer was rolled back (TASK-2026-045) after the duplication it was meant to
@@ -16,6 +16,7 @@
 # `skilllite-services`. The Desktop manifest deny invocation
 # (`cargo deny --manifest-path crates/skilllite-assistant/src-tauri/Cargo.toml check bans`)
 # remains in CI to enforce the boundary.
+# Target (D1′): thin client over released `skilllite` only — docs/en/ASSISTANT-SPLIT-ARCHITECTURE.md
 
 [graph]
 # Resolve the same feature set CI builds with (full agent / artifact / swarm graph).

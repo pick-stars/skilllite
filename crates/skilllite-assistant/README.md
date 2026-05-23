@@ -2,6 +2,10 @@
 
 Tauri 2 + React 18 + TypeScript + Vite 桌面应用脚手架。
 
+**可选官方 GUI** — 默认推荐路径是 `pip install skilllite` + MCP（见仓库根 README）。本应用是引擎的图形分发渠道。
+
+**拆仓架构（目标态）：** 聊天走 `skilllite agent-rpc`（L1）；进化/运行时等逐步改为 `skilllite … --json`（L2），最终不再 path 依赖 `skilllite-agent` / `skilllite-evolution` / `skilllite-sandbox`。详见 [Assistant split architecture](../../docs/en/ASSISTANT-SPLIT-ARCHITECTURE.md)（[中文](../../docs/zh/ASSISTANT-SPLIT-ARCHITECTURE.md)）。
+
 **所有 npm 命令必须在当前目录（`crates/skilllite-assistant`）下执行**，仓库根目录没有 `package.json`。
 
 ## Vite 配置
@@ -16,16 +20,31 @@ Tauri 2 + React 18 + TypeScript + Vite 桌面应用脚手架。
 ```bash
 cd crates/skilllite-assistant   # 若在仓库根目录，先执行这句
 npm install
+npm run prebuild:tauri          # 首次或改引擎后：安装 ~/.skilllite/bin/skilllite（可选但推荐）
 npm run tauri dev
 ```
+
+`tauri dev` 的 `beforeDevCommand` **只启动 Vite**（`scripts/dev-tauri.sh`），不会在每次开发前跑完整的 `prebuild-skilllite.sh`（其中 `cargo install --release` 常需数分钟）。若仍把完整预构建串在 `beforeDevCommand` 里，Tauri 会在约 **180 秒** 内等不到 `http://localhost:5173` 并报错，而 `cargo install` 可能仍在后台继续。
+
+- 需要打包资源或强制重装引擎：`npm run prebuild:tauri`
+- 开发时后台刷新引擎：`SKILLLITE_BACKGROUND_PREBUILD=1 npm run tauri dev`（日志 `/tmp/skilllite-prebuild-dev.log`）
+- 已有 `~/.skilllite/bin/skilllite` 且不想碰引擎：直接 `npm run tauri dev`
+
+### 无法连接 localhost:5173（等待 180s 超时）
+
+1. 确认在 **`crates/skilllite-assistant`** 下执行，且已 `npm install`。
+2. 另开终端试：`npm run dev`，浏览器打开 http://localhost:5173 是否正常。
+3. 若 Vite 能起、仅 `tauri dev` 失败：检查 `tauri.conf.json` 的 `devUrl` 与 `vite.config.ts` 的 `port` 是否同为 **5173**（勿只改一端）。
+4. 若刚改过 Rust 引擎：先 `npm run prebuild:tauri` 或等后台安装完成，并保证 `export PATH="$HOME/.skilllite/bin:$PATH"`。
 
 ### 端口 5173 已被占用
 
 开发服务器固定使用 **5173**（与 `src-tauri/tauri.conf.json` 里的 `devUrl` 一致），且 `vite.config.ts` 里为 **`strictPort: true`**，被占用时会直接报错：`Port 5173 is already in use`。
 
 1. 查看占用进程：`lsof -nP -iTCP:5173 -sTCP:LISTEN`
-2. 若确认可结束（例如上次未关干净的 Vite / 另一个前端项目），例如：`kill <PID>`  
-   本机曾出现示例：`node` 监听 `[::1]:5173`。
+2. 若确认可结束（例如上次未关干净的 Vite / 另一个前端项目）：`kill $(lsof -t -iTCP:5173 -sTCP:LISTEN)`  
+   本机常见为 `node` 监听 `[::1]:5173`。
+3. 若该进程**就是本项目的 Vite** 且页面能打开，可直接再跑 `npm run tauri dev`：`dev-tauri.sh` 会**复用**已在跑的 dev server（无需再起第二个 Vite）。
 
 若你**需要同时**跑两个 Vite 项目，不要只改 `vite.config.ts` 端口而不改 Tauri 的 `devUrl`，否则桌面壳仍连旧地址；应成对修改 `vite.config.ts` 的 `server.port` 与 `tauri.conf.json` 的 `build.devUrl`。
 
