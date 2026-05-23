@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use skilllite_core::skill::deps;
 use skilllite_core::skill::discovery::discover_skill_instances_in_workspace;
-use skilllite_core::skill::{manifest, metadata};
 use skilllite_core::skill::trust::TrustTier;
+use skilllite_core::skill::{manifest, metadata};
 
 use crate::Result;
 

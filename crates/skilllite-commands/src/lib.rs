@@ -27,7 +27,6 @@ pub mod security;
 #[cfg(feature = "channel_serve")]
 pub mod channel_serve;
 pub mod env;
-pub mod runtime;
 #[cfg(feature = "agent")]
 pub mod evolution;
 #[cfg(feature = "agent")]
@@ -46,6 +45,7 @@ pub mod reindex;
 pub mod replay;
 #[cfg(feature = "agent")]
 pub mod replay_quality;
+pub mod runtime;
 #[cfg(feature = "agent")]
 pub mod schedule;
 pub mod skill;
