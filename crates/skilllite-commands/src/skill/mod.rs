@@ -5,6 +5,7 @@
 
 mod add;
 mod common;
+mod desktop_list;
 mod import_openclaw;
 mod list;
 mod remove;
@@ -13,6 +14,7 @@ mod verify;
 
 pub use add::{cmd_add, update_skill_from_source};
 pub(crate) use common::resolve_skills_dir;
+pub use desktop_list::{cmd_list_desktop, list_desktop_skills, DesktopSkillSnapshot};
 pub use import_openclaw::cmd_import_openclaw_skills;
 pub(crate) use import_openclaw::{
     collect_openclaw_import_candidates, openclaw_workspace_candidates, SkillConflictPolicy,

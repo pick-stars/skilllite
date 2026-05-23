@@ -45,6 +45,7 @@ pub mod reindex;
 pub mod replay;
 #[cfg(feature = "agent")]
 pub mod replay_quality;
+pub mod runtime;
 #[cfg(feature = "agent")]
 pub mod schedule;
 pub mod skill;
