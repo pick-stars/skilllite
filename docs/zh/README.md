@@ -586,6 +586,7 @@ MIT — 第三方依赖详见 [THIRD_PARTY_LICENSES.md](../../THIRD_PARTY_LICENS
 ## 📚 文档
 
 - [选择你的路径](./START_PATHS.md) — 沙箱/MCP（推荐）/ 全栈 / 可选桌面
+- [Assistant 可拆仓架构](./ASSISTANT-SPLIT-ARCHITECTURE.md) — 桌面独立仓库、L1/L2/L3 集成与迁移阶段
 - [快速入门](./GETTING_STARTED.md) — 安装和快速入门指南
 - [Channel 与 Gateway 配置指南](./GUIDE_CHANNEL_GATEWAY.md) — Webhook 入站、`SKILLLITE_CHANNEL_*` 摘要与桌面助手流程（含案例与流程图）
 - [更新日志](../../CHANGELOG.md) — 版本历史与升级说明

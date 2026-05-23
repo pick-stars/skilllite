@@ -47,15 +47,18 @@
 
 ## 4. Desktop (skilllite-assistant)
 
-- **Entry status**: First-class entry (Phase 0 D1, 2026-04-20). Architectural rules, dependency policy (`deny.toml`), CI checks (`cargo deny check bans` runs against this manifest in addition to the root workspace), documentation, and testing strategy treat Desktop on equal footing with the CLI. Desktop is **not** a thin shell over the installed binary.
-- **Entry**: Tauri app `skilllite-assistant`. Built via a separate Cargo manifest (`crates/skilllite-assistant/src-tauri/Cargo.toml`) and excluded from the root workspace because Tauri requires platform GUI toolchains (e.g. glib/GTK on Linux). Build with `cargo build --manifest-path crates/skilllite-assistant/src-tauri/Cargo.toml` or `npm run tauri build` from `crates/skilllite-assistant/`.
-- **Dependencies**:
-  - **Build time (direct path deps)**: `skilllite-core`, `skilllite-fs`, `skilllite-sandbox`, `skilllite-agent`, `skilllite-evolution`.
-  - **Runtime fallback**: For a subset of commands the bridge still spawns the installed `skilllite` binary (e.g. `agent-rpc` subprocess); see `crates/skilllite-assistant/README.md`. This is a runtime convenience, not a build-time requirement.
-- **Capabilities**: GUI chat, session management, evolution review/triggering, runtime probing/provisioning, transcript/memory/output views, IDE three-pane layout, image attachments to multimodal `agent_chat`.
-- **Chat input**: `Enter` sends; `Shift+Enter` inserts a newline; during an active IME composition, `Enter` is left to the IME (confirm candidates) and does not send.
-- **Use case**: Desktop users who prefer not to use the CLI; tray and shortcut scenarios.
-- **Boundary policy**: Direct dependencies on `skilllite-{agent,sandbox,evolution}` are explicitly allow-listed in `deny.toml` for now. Phase 1+ progressively moves shared flows behind a `skilllite-services` crate; existing direct deps remain permissible during migration. Reverting Desktop to a "shell" status would require explicitly overturning D1.
+- **Product role**: **Optional** GUI distribution of the engine — not the default integrator path ([Path 2 — Sandbox & MCP](./START_PATHS.md#path-2-sandbox-mcp) is). Can move to a **separate repository** once the split-ready contract is implemented ([Assistant split architecture](./ASSISTANT-SPLIT-ARCHITECTURE.md)).
+- **Entry (today)**: Tauri app under `crates/skilllite-assistant/`. Separate Cargo manifest (excluded from root workspace for Tauri/GUI toolchains). Build: `npm run tauri build` in that crate directory.
+- **Integration model (target)** — three layers only:
+  - **L1** `skilllite agent-rpc` — streaming chat, confirm/clarify (already used).
+  - **L2** `skilllite … --json` — evolution panel, runtime install, skill list (to complete; see split doc §5.2).
+  - **L3** Workspace files — prompts/transcript paths where UI reads disk directly.
+- **Dependencies (today vs target)**:
+  - **Today**: Direct path deps on `skilllite-core`, `skilllite-fs`, `skilllite-sandbox`, `skilllite-agent`, `skilllite-evolution` (allow-listed in `deny.toml`; historical D1, 2026-04-20).
+  - **Target (D1′)**: **No** path deps on engine crates; semver-pinned **`skilllite` binary** only (+ optional `skilllite-client` types crate).
+- **Capabilities**: GUI chat, session management, evolution review/triggering, runtime probing/provisioning, IDE layout, multimodal `agent_chat`.
+- **Use case**: Users who want a local app without wiring MCP in an IDE.
+- **Migration**: P0 docs → P1 engine `--json` → P2 thin bridge in monorepo → P4 extract repo ([checklist](./ASSISTANT-SPLIT-ARCHITECTURE.md#12-checklist-before-extracting-repo)).
 
 ---
 

@@ -6,6 +6,7 @@
 
 mod bundled_skills_sync;
 mod chat;
+mod evolution_cli;
 mod followup_suggestions;
 mod integrations;
 mod llm_routing_error;

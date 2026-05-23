@@ -236,16 +236,16 @@ skilllite (main binary)
   ├── skilllite-channel            # standalone (no `skilllite-*` path deps); outbound adapters; inbound webhook MVP via `skilllite channel serve`; unified host lives in main binary via `skilllite gateway serve`
   └── skilllite-core (root)
 
-skilllite-assistant (Tauri desktop, first-class entry — Phase 0 D1)
-  ├── skilllite-core
-  ├── skilllite-fs
-  ├── skilllite-sandbox          (allow-listed wrapper in deny.toml)
-  ├── skilllite-agent            (allow-listed wrapper in deny.toml)
-  └── skilllite-evolution        (allow-listed wrapper in deny.toml)
+skilllite-assistant (Tauri desktop — optional distribution; split target)
+  ├── Today: path deps → skilllite-core, fs, sandbox, agent, evolution (D1 allow-list)
+  └── Target: subprocess-only → released skilllite binary (agent-rpc + CLI --json)
 
 Execution chain (CLI):  CLI/MCP/stdio_rpc → skilllite-commands → skilllite-agent → skilllite-executor → skilllite-sandbox → skilllite-core
-Execution chain (Desktop, today): Tauri command → skilllite_bridge → {agent | sandbox | evolution | core | fs} directly.
-Future direction (Phase 1+): both entries route shared flows through a new `skilllite-services` crate before reaching domain crates.
+Execution chain (Desktop, today): Tauri → skilllite_bridge → {agent-rpc child | in-process agent/sandbox/evolution | CLI child}.
+Execution chain (Desktop, target): Tauri → bridge → {L1 agent-rpc | L2 skilllite --json | L3 workspace files} only.
+
+See [Assistant split architecture](./ASSISTANT-SPLIT-ARCHITECTURE.md) for L1/L2/L3, migration phases P0–P5, and repo extraction checklist.
+Optional accelerator: `skilllite-services` in the engine repo (CLI + daemon surfaces); Assistant must not path-dep it at split time.
 
 Core doesn't depend on upper layers; Agent is Core's customer.
 ```

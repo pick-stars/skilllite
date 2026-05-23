@@ -753,6 +753,7 @@ pub enum Commands {
     ///
     /// Examples:
     ///   skilllite evolution status
+    ///   skilllite evolution status --json --workspace .
     ///   skilllite evolution reset
     ///   skilllite evolution confirm <name>
     #[cfg(feature = "agent")]
@@ -1026,10 +1027,29 @@ pub enum GatewayAction {
 #[derive(Subcommand, Debug)]
 pub enum EvolutionAction {
     /// Show evolution statistics, effectiveness scores, trends, and time profile
-    Status,
+    Status {
+        /// Emit desktop-compatible JSON on stdout (human metrics table when omitted)
+        #[arg(long)]
+        json: bool,
+        /// Project workspace root (loads `.env` from this directory)
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
+        /// Life Pulse periodic arm anchor (unix seconds); omit for first-tick semantics
+        #[arg(long)]
+        periodic_anchor_unix: Option<i64>,
+    },
 
     /// Query evolution backlog proposals with optional filters
     Backlog {
+        /// Emit JSON array on stdout
+        #[arg(long)]
+        json: bool,
+        /// Hide executed rows with terminal acceptance (desktop default)
+        #[arg(long)]
+        hide_closed: bool,
+        /// Project workspace root
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
         /// Filter by backlog status (e.g. queued/executing/executed/shadow_approved/policy_denied)
         #[arg(long)]
         status: Option<String>,
@@ -1039,6 +1059,22 @@ pub enum EvolutionAction {
         /// Max rows to display
         #[arg(long, default_value_t = 20)]
         limit: usize,
+    },
+
+    /// List pending evolved skills (desktop UI)
+    Pending {
+        #[arg(long)]
+        json: bool,
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
+    },
+
+    /// Look up one backlog row by proposal_id
+    ProposalStatus {
+        #[arg(long)]
+        json: bool,
+        #[arg(value_name = "PROPOSAL_ID")]
+        proposal_id: String,
     },
 
     /// Reset to seed state — delete all evolved rules, examples, and skills
@@ -1064,23 +1100,36 @@ pub enum EvolutionAction {
 
     /// Confirm a pending evolved skill (A10) — move from _pending to _evolved (project-level)
     Confirm {
-        /// Skill name to confirm
+        #[arg(long)]
+        json: bool,
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
         #[arg(value_name = "SKILL_NAME")]
         skill_name: String,
     },
 
     /// Reject a pending evolved skill (A10) — remove without adding
     Reject {
-        /// Skill name to reject
+        #[arg(long)]
+        json: bool,
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
         #[arg(value_name = "SKILL_NAME")]
         skill_name: String,
     },
 
     /// Run evolution once synchronously — outputs NodeResult with new_skill when skill produced
     Run {
-        /// Output result as JSON (NodeResult format) for machine consumption
         #[arg(long)]
         json: bool,
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
+        /// Force a specific backlog proposal_id for this run
+        #[arg(long)]
+        proposal_id: Option<String>,
+        /// Log `manual_evolution_run_triggered` after a successful run (desktop UI)
+        #[arg(long)]
+        log_manual_trigger: bool,
     },
 
     /// Repair skills: validate then LLM-fix failures. Without names, repair all failed; with names, only validate/repair those (faster when many skills).

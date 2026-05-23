@@ -1189,7 +1189,7 @@ fn should_evolve_impl(
 }
 
 /// Passive-side gates + window stats for UI (read-only).
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PassiveScheduleDiagnostics {
     pub evolution_disabled: bool,
     pub daily_runs_today: i64,

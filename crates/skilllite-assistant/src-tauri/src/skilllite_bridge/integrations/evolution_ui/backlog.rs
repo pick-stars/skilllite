@@ -1,8 +1,13 @@
-//! Evolution backlog rows and proposal status for the desktop UI.
+//! Evolution backlog rows and proposal status for the desktop UI (L2 CLI first).
 
-use serde::Serialize;
+use std::path::Path;
 
-#[derive(Debug, Clone, Serialize)]
+use serde::{Deserialize, Serialize};
+
+use crate::skilllite_bridge::chat::ChatConfigOverrides;
+use crate::skilllite_bridge::evolution_cli::spawn_skilllite_json;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionProposalStatusDto {
     pub proposal_id: String,
     pub status: String,
@@ -12,7 +17,29 @@ pub struct EvolutionProposalStatusDto {
 }
 
 pub fn get_evolution_proposal_status(
-    _workspace: &str,
+    workspace: &str,
+    proposal_id: &str,
+    skilllite_path: Option<&Path>,
+) -> Result<EvolutionProposalStatusDto, String> {
+    if let Some(path) = skilllite_path {
+        if let Ok(row) = spawn_skilllite_json(
+            path,
+            workspace,
+            None,
+            &[
+                "evolution",
+                "proposal-status",
+                "--json",
+                proposal_id,
+            ],
+        ) {
+            return Ok(row);
+        }
+    }
+    get_evolution_proposal_status_inprocess(proposal_id)
+}
+
+fn get_evolution_proposal_status_inprocess(
     proposal_id: &str,
 ) -> Result<EvolutionProposalStatusDto, String> {
     let chat_root = skilllite_core::paths::chat_root();
@@ -37,7 +64,7 @@ pub fn get_evolution_proposal_status(
     .map_err(|e| e.to_string())
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionBacklogRowDto {
     pub proposal_id: String,
     pub source: String,
@@ -50,9 +77,34 @@ pub struct EvolutionBacklogRowDto {
 }
 
 pub fn load_evolution_backlog(
-    _workspace: &str,
+    workspace: &str,
     limit: usize,
+    skilllite_path: Option<&Path>,
 ) -> Result<Vec<EvolutionBacklogRowDto>, String> {
+    if let Some(path) = skilllite_path {
+        let capped = limit.clamp(1, 200);
+        if let Ok(rows) = spawn_skilllite_json::<Vec<EvolutionBacklogRowDto>>(
+            path,
+            workspace,
+            None,
+            &[
+                "evolution",
+                "backlog",
+                "--json",
+                "--hide-closed",
+                "--limit",
+                &capped.to_string(),
+                "--workspace",
+                workspace,
+            ],
+        ) {
+            return Ok(rows);
+        }
+    }
+    load_evolution_backlog_inprocess(limit)
+}
+
+fn load_evolution_backlog_inprocess(limit: usize) -> Result<Vec<EvolutionBacklogRowDto>, String> {
     let chat_root = skilllite_core::paths::chat_root();
     let conn =
         skilllite_evolution::feedback::open_evolution_db(&chat_root).map_err(|e| e.to_string())?;

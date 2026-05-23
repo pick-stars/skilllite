@@ -234,16 +234,16 @@ skilllite (主二进制)
   ├── skilllite-channel            # 独立 crate（无 `skilllite-*` path 依赖）；出站适配；入站 webhook MVP 为 `skilllite channel serve`；统一宿主在主二进制中通过 `skilllite gateway serve` 提供
   └── skilllite-core (根)
 
-skilllite-assistant（Tauri 桌面端，一等入口 — Phase 0 D1）
-  ├── skilllite-core
-  ├── skilllite-fs
-  ├── skilllite-sandbox          （在 deny.toml 中显式 allow-list）
-  ├── skilllite-agent            （在 deny.toml 中显式 allow-list）
-  └── skilllite-evolution        （在 deny.toml 中显式 allow-list）
+skilllite-assistant（Tauri 桌面 — 可选分发；拆仓目标）
+  ├── 现状：path 依赖 core、fs、sandbox、agent、evolution（D1 白名单）
+  └── 目标：仅子进程 → 已发布 skilllite 二进制（agent-rpc + CLI --json）
 
 执行链（CLI）：CLI/MCP/stdio_rpc → skilllite-commands → skilllite-agent → skilllite-executor → skilllite-sandbox → skilllite-core
-执行链（Desktop，当前）：Tauri command → skilllite_bridge → {agent | sandbox | evolution | core | fs} 直接调用。
-未来方向（Phase 1+）：CLI 与 Desktop 共享流程统一通过新建的 `skilllite-services` crate 再抵达领域 crate。
+执行链（Desktop，现状）：Tauri → skilllite_bridge → {agent-rpc 子进程 | 进程内 agent/sandbox/evolution | CLI 子进程}。
+执行链（Desktop，目标）：Tauri → bridge → 仅 {L1 agent-rpc | L2 skilllite --json | L3 工作区文件}。
+
+详见 [Assistant 可拆仓架构](./ASSISTANT-SPLIT-ARCHITECTURE.md)（L1/L2/L3、阶段 P0–P5、拆仓检查清单）。
+可选加速：引擎仓 `skilllite-services`（供 CLI/守护进程）；拆仓时 Assistant 不得 path 依赖该 crate。
 
 Core 不依赖上层；Agent 是 Core 的客户。
 ```

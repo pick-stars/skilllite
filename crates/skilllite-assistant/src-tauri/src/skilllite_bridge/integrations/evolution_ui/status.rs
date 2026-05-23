@@ -1,8 +1,14 @@
 //! Evolution feedback DB snapshot for the assistant UI (`load_evolution_status`).
+//!
+//! Prefer L2 `skilllite evolution status --json` when a `skilllite` binary is available; falls back to
+//! in-process engine crates if the CLI fails (older binary, spawn error).
 
-use serde::Serialize;
+use std::path::Path;
+
+use serde::{Deserialize, Serialize};
 
 use crate::skilllite_bridge::chat::ChatConfigOverrides;
+use crate::skilllite_bridge::evolution_cli::spawn_skilllite_json;
 
 use super::config::{
     effective_evo_cooldown_hours, effective_evo_profile_key, evolution_mode_from_workspace,
@@ -10,7 +16,7 @@ use super::config::{
 };
 use crate::skilllite_bridge::integrations::shared::existing_workspace_skills_root;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionLogEntryDto {
     pub ts: String,
     #[serde(rename = "event_type")]
@@ -22,7 +28,7 @@ pub struct EvolutionLogEntryDto {
     pub txn_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionStatusPayload {
     pub mode_key: String,
     pub mode_label: String,
@@ -59,11 +65,23 @@ pub struct EvolutionStatusPayload {
     pub db_error: Option<String>,
 }
 
-/// Evolution feedback DB + schedule hints for the assistant UI.
-///
-/// `periodic_anchor_unix`: last time the desktop **periodic** arm advanced (`LifePulseState`); pass
-/// `None` when unavailable (e.g. first launch — periodic elapsed is reported from “now”).
-pub fn load_evolution_status(
+fn load_evolution_status_via_cli(
+    workspace: &str,
+    cfg: Option<&ChatConfigOverrides>,
+    periodic_anchor_unix: Option<i64>,
+    skilllite_path: &Path,
+) -> Result<EvolutionStatusPayload, String> {
+    let mut args = vec!["evolution", "status", "--json", "--workspace", workspace];
+    let anchor_buf;
+    if let Some(anchor) = periodic_anchor_unix {
+        anchor_buf = anchor.to_string();
+        args.push("--periodic-anchor-unix");
+        args.push(&anchor_buf);
+    }
+    spawn_skilllite_json(skilllite_path, workspace, cfg, &args)
+}
+
+fn load_evolution_status_inprocess(
     workspace: &str,
     cfg: Option<ChatConfigOverrides>,
     periodic_anchor_unix: Option<i64>,
@@ -210,4 +228,26 @@ pub fn load_evolution_status(
         empty_proposals_reason,
         db_error,
     }
+}
+
+/// Evolution feedback DB + schedule hints for the assistant UI.
+///
+/// `periodic_anchor_unix`: last time the desktop **periodic** arm advanced (`LifePulseState`); pass
+/// `None` when unavailable (e.g. first launch — periodic elapsed is reported from “now”).
+///
+/// When `skilllite_path` is provided, tries `skilllite evolution status --json` first (L2).
+pub fn load_evolution_status(
+    workspace: &str,
+    cfg: Option<ChatConfigOverrides>,
+    periodic_anchor_unix: Option<i64>,
+    skilllite_path: Option<&Path>,
+) -> EvolutionStatusPayload {
+    if let Some(path) = skilllite_path {
+        if let Ok(payload) =
+            load_evolution_status_via_cli(workspace, cfg.as_ref(), periodic_anchor_unix, path)
+        {
+            return payload;
+        }
+    }
+    load_evolution_status_inprocess(workspace, cfg, periodic_anchor_unix)
 }

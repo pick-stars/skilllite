@@ -419,16 +419,35 @@ fn register_agent(reg: &mut CommandRegistry) {
         if let Commands::Evolution { action } = cmd {
             use crate::cli::EvolutionAction;
             let r = match action {
-                EvolutionAction::Status => skilllite_commands::evolution::cmd_status(),
+                EvolutionAction::Status {
+                    json,
+                    workspace,
+                    periodic_anchor_unix,
+                } => skilllite_commands::evolution::cmd_status(
+                    *json,
+                    workspace,
+                    *periodic_anchor_unix,
+                ),
                 EvolutionAction::Backlog {
+                    json,
+                    hide_closed,
+                    workspace: _,
                     status,
                     risk,
                     limit,
                 } => skilllite_commands::evolution::cmd_backlog(
+                    *json,
+                    *hide_closed,
                     status.as_deref(),
                     risk.as_deref(),
                     *limit,
                 ),
+                EvolutionAction::Pending { json, workspace } => {
+                    skilllite_commands::evolution::cmd_pending(*json, workspace)
+                }
+                EvolutionAction::ProposalStatus { json, proposal_id } => {
+                    skilllite_commands::evolution::cmd_proposal_status(*json, proposal_id)
+                }
                 EvolutionAction::Reset { force } => {
                     skilllite_commands::evolution::cmd_reset(*force)
                 }
@@ -438,13 +457,27 @@ fn register_agent(reg: &mut CommandRegistry) {
                 EvolutionAction::Explain { rule_id } => {
                     skilllite_commands::evolution::cmd_explain(rule_id)
                 }
-                EvolutionAction::Confirm { skill_name } => {
-                    skilllite_commands::evolution::cmd_confirm(skill_name)
-                }
-                EvolutionAction::Reject { skill_name } => {
-                    skilllite_commands::evolution::cmd_reject(skill_name)
-                }
-                EvolutionAction::Run { json } => skilllite_commands::evolution::cmd_run(*json),
+                EvolutionAction::Confirm {
+                    json,
+                    workspace,
+                    skill_name,
+                } => skilllite_commands::evolution::cmd_confirm(*json, workspace, skill_name),
+                EvolutionAction::Reject {
+                    json,
+                    workspace,
+                    skill_name,
+                } => skilllite_commands::evolution::cmd_reject(*json, workspace, skill_name),
+                EvolutionAction::Run {
+                    json,
+                    workspace,
+                    proposal_id,
+                    log_manual_trigger,
+                } => skilllite_commands::evolution::cmd_run(
+                    *json,
+                    workspace,
+                    proposal_id.as_deref(),
+                    *log_manual_trigger,
+                ),
                 EvolutionAction::RepairSkills {
                     skills,
                     from_source,

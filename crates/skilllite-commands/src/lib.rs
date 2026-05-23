@@ -29,6 +29,10 @@ pub mod channel_serve;
 pub mod env;
 #[cfg(feature = "agent")]
 pub mod evolution;
+#[cfg(feature = "agent")]
+mod evolution_desktop;
+#[cfg(feature = "agent")]
+mod evolution_status;
 pub mod ide;
 pub mod init;
 pub mod migrate;
