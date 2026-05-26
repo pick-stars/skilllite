@@ -90,7 +90,7 @@ pub fn reveal_in_file_manager(path_str: &str) -> Result<(), String> {
     }
     let path = raw.clone();
     if !path.exists() {
-        let rt = skilllite_sandbox::get_runtime_dir(None)
+        let rt = crate::skilllite_bridge::local::paths::default_runtime_cache_dir()
             .ok_or_else(|| "无法解析 SkillLite 运行时目录".to_string())?;
         if raw == rt {
             std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
@@ -562,7 +562,7 @@ pub fn write_workspace_text_file(
     if workspace_write_path_blocked(&normalized) {
         return Err("禁止写入该路径（敏感文件）".to_string());
     }
-    skilllite_fs::write_file(&normalized, content).map_err(|e| e.to_string())
+    std::fs::write(&normalized, content).map_err(|e| e.to_string())
 }
 
 /// Read UTF-8 text from a file under the workspace root (same rules as [`write_workspace_text_file`]).

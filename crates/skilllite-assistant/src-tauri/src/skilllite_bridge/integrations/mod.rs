@@ -18,4 +18,6 @@ pub use evolution_ui::*;
 pub use prompt_artifact::*;
 pub use skill_rpc::*;
 
-pub use skilllite_sandbox::{ProvisionRuntimesResult, RuntimeUiLine, RuntimeUiSnapshot};
+pub use crate::skilllite_bridge::local::engine_types::{
+    ProvisionRuntimesResult, RuntimeUiLine, RuntimeUiSnapshot,
+};

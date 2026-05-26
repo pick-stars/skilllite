@@ -3,15 +3,14 @@
 //! 与 [`crate::skilllite_bridge::protocol`] 中的 **agent-rpc JSON-lines 流** 分离：本模块只处理
 //! 可执行 CLI 与工作区目录，不承担 stdout 行协议解析。契约测试见同目录各子模块 `#[cfg(test)]`。
 
+use crate::skilllite_bridge::local::env_keys::paths as env_paths;
 use crate::skilllite_bridge::paths::{find_project_root, load_dotenv_for_child};
 use serde::{Deserialize, Serialize};
-use skilllite_core::skill::{deps, manifest, metadata, trust::TrustTier};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::skilllite_bridge::evolution_cli::spawn_skilllite_json;
 
-use super::shared::{discover_skill_instances, find_skill_dir, resolve_workspace_skills_root};
+use super::shared::{find_skill_dir, resolve_workspace_skills_root};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,224 +33,14 @@ pub struct DesktopSkillInfo {
     pub missing_env_vars: Vec<String>,
 }
 
-/// List desktop skill infos in workspace (L2 CLI first, in-process fallback).
-pub fn list_skills(workspace: &str, skilllite_path: Option<&Path>) -> Vec<DesktopSkillInfo> {
-    if let Some(path) = skilllite_path {
-        if let Ok(rows) = spawn_skilllite_json::<Vec<DesktopSkillInfo>>(
-            path,
-            workspace,
-            None,
-            &["skills", "list", "--json", "--workspace", workspace],
-        ) {
-            return rows;
-        }
-    }
-    list_skills_inprocess(workspace)
-}
-
-fn list_skills_inprocess(workspace: &str) -> Vec<DesktopSkillInfo> {
-    let root = find_project_root(workspace);
-    let mut manifest_cache = std::collections::HashMap::new();
-    let mut skills = Vec::new();
-    for (path, name) in discover_skill_instances(&root) {
-        skills.push(build_desktop_skill_info(&path, &name, &mut manifest_cache));
-    }
-    skills.sort_by(|a, b| a.name.cmp(&b.name));
-    skills
-}
-
-fn build_desktop_skill_info(
-    skill_path: &Path,
-    fallback_name: &str,
-    manifest_cache: &mut std::collections::HashMap<PathBuf, manifest::SkillManifest>,
-) -> DesktopSkillInfo {
-    let manifest_entry = manifest_entry_for_skill(skill_path, manifest_cache);
-    let parsed = metadata::parse_skill_metadata(skill_path).ok();
-    let name = parsed
-        .as_ref()
-        .map(|meta| meta.name.clone())
-        .filter(|name| !name.trim().is_empty())
-        .unwrap_or_else(|| fallback_name.to_string());
-    let description = parsed.as_ref().and_then(|meta| meta.description.clone());
-    let skill_type = parsed
-        .as_ref()
-        .map(|meta| desktop_skill_type(skill_path, meta))
-        .unwrap_or_else(|| {
-            if metadata::has_executable_scripts(skill_path) {
-                "script".to_string()
-            } else {
-                "prompt_only".to_string()
-            }
-        });
-    let dependency = parsed
-        .as_ref()
-        .and_then(|meta| deps::detect_dependencies(skill_path, meta).ok());
-    let (missing_commands, missing_any_command_groups, missing_env_vars) = parsed
-        .as_ref()
-        .map(detect_missing_requirements)
-        .unwrap_or_default();
-
-    DesktopSkillInfo {
-        name,
-        description,
-        skill_type,
-        source: manifest_entry.as_ref().map(|entry| entry.source.clone()),
-        trust_tier: manifest_entry
-            .as_ref()
-            .map(|entry| trust_tier_label(entry.trust_tier.clone()))
-            .unwrap_or_else(|| "unknown".to_string()),
-        trust_score: manifest_entry.as_ref().map(|entry| entry.trust_score),
-        admission_risk: manifest_entry
-            .as_ref()
-            .and_then(|entry| entry.admission_risk.clone()),
-        dependency_type: dependency_type_label(dependency.as_ref().map(|dep| &dep.dep_type)),
-        dependency_packages: dependency
-            .as_ref()
-            .map(|dep| dep.packages.clone())
-            .unwrap_or_default(),
-        missing_commands,
-        missing_any_command_groups,
-        missing_env_vars,
-    }
-}
-
-fn manifest_entry_for_skill(
-    skill_path: &Path,
-    manifest_cache: &mut std::collections::HashMap<PathBuf, manifest::SkillManifest>,
-) -> Option<manifest::SkillManifestEntry> {
-    let parent = skill_path.parent()?.to_path_buf();
-    if !manifest_cache.contains_key(&parent) {
-        manifest_cache.insert(
-            parent.clone(),
-            manifest::load_manifest(&parent).unwrap_or_default(),
-        );
-    }
-    let skill_key = skill_path.file_name()?.to_str()?;
-    manifest_cache
-        .get(&parent)
-        .and_then(|loaded| loaded.skills.get(skill_key).cloned())
-}
-
-fn desktop_skill_type(skill_path: &Path, meta: &metadata::SkillMetadata) -> String {
-    if !meta.entry_point.is_empty() || metadata::has_executable_scripts(skill_path) {
-        "script".to_string()
-    } else if meta.is_bash_tool_skill() {
-        "bash_tool".to_string()
-    } else {
-        "prompt_only".to_string()
-    }
-}
-
-fn trust_tier_label(tier: TrustTier) -> String {
-    match tier {
-        TrustTier::Trusted => "trusted",
-        TrustTier::Reviewed => "reviewed",
-        TrustTier::Community => "community",
-        TrustTier::Unknown => "unknown",
-    }
-    .to_string()
-}
-
-fn dependency_type_label(dep_type: Option<&deps::DependencyType>) -> String {
-    match dep_type {
-        Some(deps::DependencyType::Python) => "python",
-        Some(deps::DependencyType::Node) => "node",
-        _ => "none",
-    }
-    .to_string()
-}
-
-fn detect_missing_requirements(
-    meta: &metadata::SkillMetadata,
-) -> (Vec<String>, Vec<Vec<String>>, Vec<String>) {
-    let mut missing_commands = std::collections::BTreeSet::new();
-    let mut missing_env_vars = std::collections::BTreeSet::new();
-    let mut missing_any_command_groups = Vec::new();
-
-    for pattern in meta.get_bash_patterns() {
-        if !command_exists(&pattern.command_prefix) {
-            missing_commands.insert(pattern.command_prefix);
-        }
-    }
-
-    let compatibility = meta.compatibility.as_deref();
-    for command in extract_compat_values(compatibility, "Requires bins: ") {
-        if !command_exists(&command) {
-            missing_commands.insert(command);
-        }
-    }
-    let any_group = extract_compat_values(compatibility, "Requires at least one bin: ");
-    if !any_group.is_empty() && !any_group.iter().any(|command| command_exists(command)) {
-        missing_any_command_groups.push(any_group);
-    }
-    for env_key in extract_compat_values(compatibility, "Requires env: ") {
-        if std::env::var_os(&env_key).is_none() {
-            missing_env_vars.insert(env_key);
-        }
-    }
-    for env_key in extract_compat_values(compatibility, "Primary credential env: ") {
-        if std::env::var_os(&env_key).is_none() {
-            missing_env_vars.insert(env_key);
-        }
-    }
-
-    (
-        missing_commands.into_iter().collect(),
-        missing_any_command_groups,
-        missing_env_vars.into_iter().collect(),
+/// List desktop skill infos in workspace (`skilllite skills list --json` only).
+pub fn list_skills(workspace: &str, skilllite_path: &Path) -> Result<Vec<DesktopSkillInfo>, String> {
+    spawn_skilllite_json(
+        skilllite_path,
+        workspace,
+        None,
+        &["skills", "list", "--json", "--workspace", workspace],
     )
-}
-
-fn extract_compat_values(compatibility: Option<&str>, prefix: &str) -> Vec<String> {
-    let Some(compatibility) = compatibility else {
-        return Vec::new();
-    };
-    compatibility
-        .split('.')
-        .map(str::trim)
-        .filter_map(|segment| segment.strip_prefix(prefix))
-        .flat_map(|rest| rest.split(','))
-        .map(str::trim)
-        .filter(|item| !item.is_empty())
-        .map(std::string::ToString::to_string)
-        .collect()
-}
-
-fn command_exists(command: &str) -> bool {
-    let candidate = Path::new(command);
-    if candidate.components().count() > 1 {
-        return candidate.is_file();
-    }
-
-    let Some(paths) = std::env::var_os("PATH") else {
-        return false;
-    };
-
-    #[cfg(windows)]
-    let path_exts: Vec<String> = std::env::var_os("PATHEXT")
-        .map(|raw| {
-            raw.to_string_lossy()
-                .split(';')
-                .filter(|item| !item.is_empty())
-                .map(|item| item.trim_matches('.').to_ascii_lowercase())
-                .collect()
-        })
-        .unwrap_or_else(|| vec!["exe".to_string(), "cmd".to_string(), "bat".to_string()]);
-
-    for dir in std::env::split_paths(&paths) {
-        let direct = dir.join(command);
-        if direct.is_file() {
-            return true;
-        }
-        #[cfg(windows)]
-        for ext in &path_exts {
-            let with_ext = dir.join(format!("{command}.{}", ext));
-            if with_ext.is_file() {
-                return true;
-            }
-        }
-    }
-    false
 }
 
 /// Open the given skill's directory in the system file manager.
@@ -285,12 +74,18 @@ pub fn open_skill_directory(workspace: &str, skill_name: &str) -> Result<(), Str
     Ok(())
 }
 
-/// Remove installed skills under the workspace (same discovery as list/open).
-/// Updates `.skilllite-manifest.json` when present. `skill_names` must be non-empty.
-pub fn remove_skills(workspace: &str, skill_names: &[String]) -> Result<String, String> {
+/// Remove installed skills via `skilllite remove --force`.
+pub fn remove_skills(
+    workspace: &str,
+    skill_names: &[String],
+    skilllite_path: &Path,
+) -> Result<String, String> {
     if skill_names.is_empty() {
         return Err("请至少勾选一个要删除的技能".to_string());
     }
+    let root = find_project_root(workspace);
+    let skills_root = resolve_workspace_skills_root(workspace);
+    let skills_dir = skills_root.to_string_lossy();
     let mut lines: Vec<String> = Vec::new();
     let mut deleted = 0usize;
     for name in skill_names {
@@ -298,18 +93,33 @@ pub fn remove_skills(workspace: &str, skill_names: &[String]) -> Result<String, 
         if name.is_empty() {
             continue;
         }
-        let Some(skill_path) = find_skill_dir(workspace, name) else {
-            lines.push(format!("未找到技能，已跳过: {}", name));
-            continue;
-        };
-        let skills_parent = skill_path
-            .parent()
-            .ok_or_else(|| format!("无效技能路径: {}", skill_path.display()))?;
-        manifest::remove_skill_entry(skills_parent, &skill_path).map_err(|e| e.to_string())?;
-        fs::remove_dir_all(&skill_path)
-            .map_err(|e| format!("删除目录失败 {}: {}", skill_path.display(), e))?;
-        deleted += 1;
-        lines.push(format!("已删除: {}", name));
+        let mut cmd = std::process::Command::new(skilllite_path);
+        crate::windows_spawn::hide_child_console(&mut cmd);
+        cmd.arg("remove")
+            .arg(name)
+            .arg("--skills-dir")
+            .arg(skills_dir.as_ref())
+            .arg("--force")
+            .current_dir(&root)
+            .env(
+                env_paths::SKILLLITE_WORKSPACE,
+                root.to_string_lossy().as_ref(),
+            )
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+        for (k, v) in load_dotenv_for_child(workspace) {
+            cmd.env(k, v);
+        }
+        let output = cmd
+            .output()
+            .map_err(|e| format!("执行 skilllite remove 失败: {}", e))?;
+        if output.status.success() {
+            deleted += 1;
+            lines.push(format!("已删除: {}", name));
+        } else {
+            let err = String::from_utf8_lossy(&output.stderr);
+            lines.push(format!("删除失败 {}: {}", name, err.trim()));
+        }
     }
     if deleted == 0 {
         return Err(if lines.is_empty() {
@@ -338,7 +148,7 @@ pub fn repair_skills(
     cmd.arg("--from-source");
     cmd.current_dir(&root)
         .env(
-            skilllite_core::config::env_keys::paths::SKILLLITE_WORKSPACE,
+            env_paths::SKILLLITE_WORKSPACE,
             root.to_string_lossy().as_ref(),
         )
         .stdout(std::process::Stdio::piped())
@@ -390,7 +200,7 @@ pub fn add_skill(
     }
     cmd.current_dir(&root)
         .env(
-            skilllite_core::config::env_keys::paths::SKILLLITE_WORKSPACE,
+            env_paths::SKILLLITE_WORKSPACE,
             root.to_string_lossy().as_ref(),
         )
         .stdout(std::process::Stdio::piped())
@@ -414,7 +224,7 @@ pub fn add_skill(
         return Err(combined);
     }
     let added_skill_names = extract_added_skill_names(&combined);
-    let all_skills = list_skills_inprocess(workspace);
+    let all_skills = list_skills(workspace, skilllite_path).unwrap_or_default();
     Ok(summarise_add_output(
         &combined,
         &all_skills,
@@ -540,61 +350,6 @@ mod skill_discovery_tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create temp dir");
         dir
-    }
-
-    #[test]
-    fn list_skill_names_uses_core_discovery_roots() {
-        let tmp = temp_test_dir("skill_roots");
-        let nested_skill = tmp.join(".claude").join("skills").join("nested-skill");
-        std::fs::create_dir_all(nested_skill.join("scripts")).expect("nested scripts");
-        std::fs::write(nested_skill.join("SKILL.md"), "name: nested-skill\n").expect("nested md");
-        std::fs::write(
-            nested_skill.join("scripts").join("run.sh"),
-            "#!/usr/bin/env bash\necho ok\n",
-        )
-        .expect("nested script");
-
-        let evolved_skill = tmp.join(".skills").join("_evolved").join("evolved-skill");
-        std::fs::create_dir_all(evolved_skill.join("scripts")).expect("evolved scripts");
-        std::fs::write(evolved_skill.join("SKILL.md"), "name: evolved-skill\n")
-            .expect("evolved md");
-        std::fs::write(
-            evolved_skill.join("scripts").join("run.py"),
-            "print('ok')\n",
-        )
-        .expect("evolved script");
-
-        let skills = list_skills_inprocess(nested_skill.to_string_lossy().as_ref());
-        let names: Vec<String> = skills.into_iter().map(|skill| skill.name).collect();
-        assert_eq!(names, vec!["evolved-skill", "nested-skill"]);
-        let _ = std::fs::remove_dir_all(&tmp);
-    }
-
-    #[test]
-    fn list_skill_names_includes_non_script_skills() {
-        let tmp = temp_test_dir("non_script_skill");
-        let bash_tool = tmp.join(".skills").join("web-search");
-        std::fs::create_dir_all(&bash_tool).expect("bash tool dir");
-        std::fs::write(
-            bash_tool.join("SKILL.md"),
-            "---\nname: web-search\nallowed-tools: Bash(infsh *)\n---\n",
-        )
-        .expect("bash tool skill md");
-
-        let skills = list_skills_inprocess(tmp.to_string_lossy().as_ref());
-        assert_eq!(skills.len(), 1);
-        assert_eq!(skills[0].name, "web-search");
-        assert_eq!(skills[0].skill_type, "bash_tool");
-        assert_eq!(skills[0].dependency_type, "node");
-        assert_eq!(skills[0].dependency_packages, vec!["infsh".to_string()]);
-        assert_eq!(skills[0].missing_commands, vec!["infsh".to_string()]);
-        let resolved = find_skill_dir(tmp.to_string_lossy().as_ref(), "web-search")
-            .expect("find non-script skill");
-        assert_eq!(
-            resolved.canonicalize().expect("resolved canonical"),
-            bash_tool.canonicalize().expect("bash tool canonical")
-        );
-        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     #[test]

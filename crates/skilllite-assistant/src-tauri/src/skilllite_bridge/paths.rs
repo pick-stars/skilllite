@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use tauri::Manager;
 
 fn has_known_skill_root(dir: &Path) -> bool {
-    skilllite_core::skill::discovery::SKILL_SEARCH_DIRS
+    crate::skilllite_bridge::local::SKILL_SEARCH_DIRS
         .iter()
         .copied()
         .filter(|entry| *entry != ".")
@@ -55,11 +55,11 @@ pub(crate) fn find_project_root(start: &str) -> PathBuf {
 /// Treats `""` / `"."` like [`find_project_root`] so GUI cwd (`/` or `System32`) does not break lookup.
 pub(crate) fn load_dotenv_for_child(workspace: &str) -> Vec<(String, String)> {
     let base = resolve_workspace_dir(workspace);
-    skilllite_core::config::parse_dotenv_walking_up(&base, 5)
+    crate::skilllite_bridge::local::parse_dotenv_walking_up(&base, 5)
 }
 
 pub(crate) fn skilllite_chat_root() -> PathBuf {
-    skilllite_core::paths::chat_root()
+    crate::skilllite_bridge::local::chat_root()
 }
 
 /// memory/ 与 output/ 下相对路径：禁止绝对路径、`..`、盘符等。
@@ -106,6 +106,40 @@ fn workspace_debug_skilllite_candidate(exe_name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../../target/debug")
         .join(exe_name)
+}
+
+/// Minimum engine version required by this desktop build (see `ASSISTANT-SPLIT-ARCHITECTURE.md`).
+pub const MIN_SKILLLITE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Verify `skilllite --version` is at least [`MIN_SKILLLITE_VERSION`].
+pub fn ensure_skilllite_version(binary: &std::path::Path) -> Result<(), String> {
+    let output = std::process::Command::new(binary)
+        .arg("--version")
+        .output()
+        .map_err(|e| format!("无法执行 skilllite --version: {}", e))?;
+    if !output.status.success() {
+        return Err("skilllite --version 失败".to_string());
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let found = text
+        .split_whitespace()
+        .find_map(|t| semver::Version::parse(t.trim_start_matches('v')).ok());
+    let Some(found) = found else {
+        return Err(format!(
+            "无法解析 skilllite 版本（需要 >= {}）: {}",
+            MIN_SKILLLITE_VERSION,
+            text.trim()
+        ));
+    };
+    let min = semver::Version::parse(MIN_SKILLLITE_VERSION)
+        .map_err(|e| format!("内部版本常量无效: {}", e))?;
+    if found < min {
+        return Err(format!(
+            "skilllite 版本过旧（当前 {}，需要 >= {}）",
+            found, min
+        ));
+    }
+    Ok(())
 }
 
 pub fn resolve_skilllite_path_app(app: &tauri::AppHandle) -> PathBuf {

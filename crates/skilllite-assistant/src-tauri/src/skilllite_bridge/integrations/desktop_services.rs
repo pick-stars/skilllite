@@ -1,7 +1,9 @@
 //! 引导体检、内置运行时预取、Ollama 探测、`schedule.json` 读写。
 
 use serde::Serialize;
-use skilllite_sandbox::{ProvisionRuntimesResult, RuntimeUiSnapshot};
+use crate::skilllite_bridge::local::engine_types::{ProvisionRuntimesResult, RuntimeUiSnapshot};
+use crate::skilllite_bridge::local::paths::data_root;
+use crate::skilllite_bridge::local::{load_schedule, save_schedule, ScheduleFile};
 use tauri::Emitter;
 
 /// Requested provider during onboarding health check.
@@ -150,7 +152,7 @@ fn check_workspace(workspace: &str) -> HealthCheckItem {
 }
 
 fn check_data_dir() -> HealthCheckItem {
-    let path = skilllite_core::paths::data_root();
+    let path = data_root();
     match std::fs::create_dir_all(&path) {
         Ok(_) => HealthCheckItem {
             ok: true,
@@ -257,16 +259,13 @@ pub fn probe_git_status() -> GitUiStatus {
 /// Python/Node 来源探测（系统 PATH vs SkillLite 缓存下载），供左侧栏等 UI 展示。
 pub fn probe_runtime_status(
     workspace: &str,
-    skilllite_path: Option<&std::path::Path>,
-) -> RuntimeUiSnapshot {
-    if let Some(path) = skilllite_path {
-        if let Ok(snap) =
-            crate::skilllite_bridge::evolution_cli::spawn_skilllite_runtime_probe(path, workspace, None)
-        {
-            return snap;
-        }
-    }
-    skilllite_sandbox::probe_runtime_for_ui(None)
+    skilllite_path: &std::path::Path,
+) -> Result<RuntimeUiSnapshot, String> {
+    crate::skilllite_bridge::evolution_cli::spawn_skilllite_runtime_probe(
+        skilllite_path,
+        workspace,
+        None,
+    )
 }
 
 /// 预下载内置 Python/Node 运行时到缓存目录（`force` 时先删再下）。
@@ -304,12 +303,7 @@ fn emit_runtime_provision_progress(app: &tauri::AppHandle, phase: &'static str, 
 }
 
 /// 无进度事件时使用（测试或脚本）；桌面端请用 [`provision_runtimes_with_emit`]。
-#[allow(dead_code)]
-pub fn provision_runtimes(python: bool, node: bool, force: bool) -> ProvisionRuntimesResult {
-    skilllite_sandbox::provision_runtimes_to_cache(None, python, node, force, None, None)
-}
-
-/// 与 [`provision_runtimes`] 相同，但通过 `skilllite-runtime-provision-progress` 事件推送进度文案。
+/// 通过 `skilllite-runtime-provision-progress` 事件推送进度文案。
 pub fn provision_runtimes_with_emit(
     app: &tauri::AppHandle,
     workspace: &str,
@@ -321,7 +315,7 @@ pub fn provision_runtimes_with_emit(
     let app_emit = app.clone();
     let ws = workspace.to_string();
     let path = skilllite_path.to_path_buf();
-    if let Ok(result) = crate::skilllite_bridge::evolution_cli::spawn_skilllite_runtime_provision(
+    crate::skilllite_bridge::evolution_cli::spawn_skilllite_runtime_provision(
         &path,
         &ws,
         None,
@@ -338,34 +332,22 @@ pub fn provision_runtimes_with_emit(
                 },
             );
         },
-    ) {
-        return result;
-    }
-
-    let py_progress = if python {
-        let app = app.clone();
-        Some(Box::new(move |m: &str| {
-            emit_runtime_provision_progress(&app, "python", m);
-        }) as Box<dyn Fn(&str) + Send>)
-    } else {
-        None
-    };
-    let node_progress = if node {
-        let app = app.clone();
-        Some(Box::new(move |m: &str| {
-            emit_runtime_provision_progress(&app, "node", m);
-        }) as Box<dyn Fn(&str) + Send>)
-    } else {
-        None
-    };
-    skilllite_sandbox::provision_runtimes_to_cache(
-        None,
-        python,
-        node,
-        force,
-        py_progress,
-        node_progress,
     )
+    .unwrap_or_else(|e| {
+        eprintln!("[runtime] provision failed: {}", e);
+        ProvisionRuntimesResult {
+            python: crate::skilllite_bridge::local::engine_types::ProvisionRuntimeItem {
+                requested: python,
+                ok: false,
+                message: e.clone(),
+            },
+            node: crate::skilllite_bridge::local::engine_types::ProvisionRuntimeItem {
+                requested: node,
+                ok: false,
+                message: e,
+            },
+        }
+    })
 }
 
 /// Result of probing local Ollama (localhost:11434).
@@ -444,16 +426,16 @@ fn ollama_get_tags() -> Result<String, ()> {
 pub fn read_schedule_json(workspace: &str) -> Result<String, String> {
     use std::path::Path;
     let ws = Path::new(workspace);
-    let sched = skilllite_core::schedule::load_schedule(ws)?;
+    let sched = load_schedule(ws)?;
     let file = sched.unwrap_or_default();
     serde_json::to_string_pretty(&file).map_err(|e| e.to_string())
 }
 
 pub fn write_schedule_json(workspace: &str, json: &str) -> Result<(), String> {
     use std::path::Path;
-    let file: skilllite_core::schedule::ScheduleFile =
+    let file: ScheduleFile =
         serde_json::from_str(json).map_err(|e| format!("schedule.json: {}", e))?;
-    skilllite_core::schedule::save_schedule(Path::new(workspace), &file)
+    save_schedule(Path::new(workspace), &file)
 }
 
 #[cfg(test)]

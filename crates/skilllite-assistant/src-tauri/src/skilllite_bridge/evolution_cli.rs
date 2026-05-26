@@ -8,7 +8,7 @@ use std::thread;
 
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use skilllite_sandbox::{ProvisionRuntimesResult, RuntimeUiSnapshot};
+use super::local::engine_types::{ProvisionRuntimesResult, RuntimeUiSnapshot};
 
 use super::chat::{merge_dotenv_with_chat_overrides, ChatConfigOverrides};
 use super::paths::{find_project_root, load_dotenv_for_child};

@@ -1,6 +1,6 @@
 //! Manual evolution trigger via `skilllite evolution run --json` (L2).
 
-use skilllite_core::protocol::NodeResult;
+use crate::skilllite_bridge::local::engine_types::NodeResult;
 
 use crate::skilllite_bridge::chat::ChatConfigOverrides;
 use crate::skilllite_bridge::evolution_cli::spawn_skilllite_json;

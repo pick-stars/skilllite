@@ -26,11 +26,15 @@ pub async fn skilllite_load_transcript(
 
 #[tauri::command]
 pub async fn skilllite_followup_suggestions(
+    app: tauri::AppHandle,
     transcript: String,
     workspace: Option<String>,
     config: Option<crate::skilllite_bridge::ChatConfigOverrides>,
 ) -> crate::skilllite_bridge::LlmInvokeResult<Vec<String>> {
-    match crate::skilllite_bridge::followup_chat_suggestions(transcript, workspace, config).await {
+    let path = crate::skilllite_bridge::resolve_skilllite_path_app(&app);
+    match crate::skilllite_bridge::followup_chat_suggestions(transcript, workspace, config, &path)
+        .await
+    {
         Ok(rows) => crate::skilllite_bridge::LlmInvokeResult::ok(rows),
         Err(err) => crate::skilllite_bridge::LlmInvokeResult::err(
             crate::skilllite_bridge::classify_llm_routing_error_message(&err),

@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{Emitter, Manager, Window};
 
-use skilllite_agent::types::McpServerEntry;
+use super::local::mcp::McpServerEntry;
 
 use super::bundled_skills_sync;
 use super::paths::{find_project_root, load_dotenv_for_child};
@@ -95,14 +95,14 @@ fn summarize_env_provenance(
         "OPENAI_API_KEY",
         "OPENAI_BASE_URL",
         "OPENAI_MODEL",
-        skilllite_core::config::env_keys::llm::MODEL,
-        skilllite_core::config::env_keys::sandbox::SKILLLITE_SANDBOX_LEVEL,
-        skilllite_core::config::env_keys::swarm::SKILLLITE_SWARM_URL,
-        skilllite_core::config::env_keys::agent_loop::SKILLLITE_MAX_ITERATIONS,
-        skilllite_core::config::env_keys::agent_loop::SKILLLITE_MAX_TOOL_CALLS_PER_TASK,
-        skilllite_core::config::env_keys::summarization::SKILLLITE_CONTEXT_SOFT_LIMIT_CHARS,
-        skilllite_core::config::env_keys::agent::SKILLLITE_UI_LOCALE,
-        skilllite_core::config::env_keys::mcp::SKILLLITE_MCP_SERVERS_JSON,
+        super::local::env_keys::llm::MODEL,
+        super::local::env_keys::sandbox::SKILLLITE_SANDBOX_LEVEL,
+        super::local::env_keys::swarm::SKILLLITE_SWARM_URL,
+        super::local::env_keys::agent_loop::SKILLLITE_MAX_ITERATIONS,
+        super::local::env_keys::agent_loop::SKILLLITE_MAX_TOOL_CALLS_PER_TASK,
+        super::local::env_keys::summarization::SKILLLITE_CONTEXT_SOFT_LIMIT_CHARS,
+        super::local::env_keys::agent::SKILLLITE_UI_LOCALE,
+        super::local::env_keys::mcp::SKILLLITE_MCP_SERVERS_JSON,
     ];
     watched
         .iter()
@@ -162,11 +162,11 @@ fn apply_chat_overrides_env(
     cfg: &ChatConfigOverrides,
 ) {
 
-    use skilllite_core::config::env_keys::agent_loop as al_keys;
-    use skilllite_core::config::env_keys::mcp as mcp_keys;
-    use skilllite_core::config::env_keys::sandbox as sb_keys;
-    use skilllite_core::config::env_keys::summarization as sum_keys;
-    use skilllite_core::config::env_keys::swarm as swarm_keys;
+    use super::local::env_keys::agent_loop as al_keys;
+    use super::local::env_keys::mcp as mcp_keys;
+    use super::local::env_keys::sandbox as sb_keys;
+    use super::local::env_keys::summarization as sum_keys;
+    use super::local::env_keys::swarm as swarm_keys;
 
     let swarm_from_ui = cfg
         .swarm_url
@@ -192,7 +192,7 @@ fn apply_chat_overrides_env(
             upsert_env(m, "OPENAI_MODEL", model.clone(), "ui_override");
             upsert_env(
                 m,
-                skilllite_core::config::env_keys::llm::MODEL,
+                super::local::env_keys::llm::MODEL,
                 model.clone(),
                 "ui_override",
             );
@@ -238,7 +238,7 @@ fn apply_chat_overrides_env(
         );
     }
 
-    use skilllite_core::config::env_keys::evolution as evo_keys;
+    use super::local::env_keys::evolution as evo_keys;
     if let Some(n) = cfg.evolution_interval_secs.filter(|&n| n > 0) {
         upsert_env(
             m,
@@ -273,7 +273,7 @@ fn apply_chat_overrides_env(
         );
     }
 
-    use skilllite_core::config::env_keys::agent as agent_keys;
+    use super::local::env_keys::agent as agent_keys;
     if let Some(ref loc) = cfg.ui_locale {
         let t = loc.trim();
         if t == "en" || t == "zh" {
@@ -381,11 +381,11 @@ pub fn chat_stream(
     }
     cmd.env("RUST_LOG", "error");
     cmd.env(
-        skilllite_core::config::env_keys::observability::SKILLLITE_QUIET,
+        super::local::env_keys::observability::SKILLLITE_QUIET,
         "1",
     );
     cmd.env(
-        skilllite_core::config::env_keys::observability::SKILLLITE_LOG_JSON,
+        super::local::env_keys::observability::SKILLLITE_LOG_JSON,
         "0",
     );
 

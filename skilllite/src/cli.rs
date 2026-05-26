@@ -763,6 +763,22 @@ pub enum Commands {
         action: SkillsAction,
     },
 
+    /// Generate follow-up question suggestions after a chat (desktop UI)
+    ///
+    /// Examples:
+    ///   skilllite suggest-followup --json --workspace . --transcript-file transcript.txt
+    ///   echo 'User: hi' | skilllite suggest-followup --json --workspace .
+    #[cfg(feature = "agent")]
+    SuggestFollowup {
+        #[arg(long)]
+        json: bool,
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
+        /// Transcript text; when omitted, read from stdin
+        #[arg(long)]
+        transcript: Option<String>,
+    },
+
     /// Manage the self-evolution engine (EVO-5)
     ///
     /// Subcommands:
@@ -1175,6 +1191,20 @@ pub enum EvolutionAction {
         workspace: String,
         #[arg(value_name = "SKILL_NAME")]
         skill_name: String,
+    },
+
+    /// Queue user-authorized capability evolution (desktop UI)
+    AuthorizeCapability {
+        #[arg(long)]
+        json: bool,
+        #[arg(long, short = 'w', default_value = ".")]
+        workspace: String,
+        #[arg(long)]
+        tool_name: String,
+        #[arg(long)]
+        outcome: String,
+        #[arg(long)]
+        summary: String,
     },
 
     /// Run evolution once synchronously — outputs NodeResult with new_skill when skill produced

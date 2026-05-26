@@ -7,7 +7,7 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use skilllite_core::config::env_keys::channel as channel_env_keys;
+use crate::skilllite_bridge::local::env_keys::channel as channel_env_keys;
 
 use crate::skilllite_bridge;
 
@@ -136,7 +136,7 @@ pub fn start_gateway(
         artifact_dir.as_deref(),
     ))
     .env(
-        skilllite_core::config::env_keys::desktop::SKILLLITE_GATEWAY_SERVE_ALLOW,
+        crate::skilllite_bridge::local::env_keys::desktop::SKILLLITE_GATEWAY_SERVE_ALLOW,
         "1",
     );
     apply_gateway_channel_notify_env(&mut cmd, &request);

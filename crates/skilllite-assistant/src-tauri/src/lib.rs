@@ -93,6 +93,9 @@ pub fn run() {
             // ── Life Pulse: start heartbeat thread ──
             let pulse_state = app.state::<life_pulse::LifePulseState>().inner().clone();
             let skilllite_path = skilllite_bridge::resolve_skilllite_path_app(app.handle());
+            if let Err(e) = skilllite_bridge::ensure_skilllite_version(&skilllite_path) {
+                eprintln!("[skilllite-bridge] {}", e);
+            }
             life_pulse::start(pulse_state, skilllite_path, app.handle().clone());
 
             // Tray icon with menu（中文；失败时通知前端 Toast）

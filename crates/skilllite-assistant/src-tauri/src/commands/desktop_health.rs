@@ -31,12 +31,12 @@ pub async fn skilllite_runtime_status(
     let ws = workspace.unwrap_or_else(|| ".".to_string());
     let path = crate::skilllite_bridge::resolve_skilllite_path_app(&app);
     match tauri::async_runtime::spawn_blocking(move || {
-        crate::skilllite_bridge::probe_runtime_status(&ws, Some(&path))
+        crate::skilllite_bridge::probe_runtime_status(&ws, &path)
     })
     .await
     {
-        Ok(s) => s,
-        Err(_) => crate::skilllite_bridge::RuntimeUiSnapshot {
+        Ok(Ok(s)) => s,
+        Ok(Err(_)) | Err(_) => crate::skilllite_bridge::RuntimeUiSnapshot {
             python: crate::skilllite_bridge::RuntimeUiLine {
                 source: "none".into(),
                 label: "加载失败".into(),

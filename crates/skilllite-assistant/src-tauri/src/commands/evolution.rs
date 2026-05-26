@@ -18,12 +18,15 @@ pub async fn skilllite_load_evolution_status(
             &ws,
             config,
             periodic_anchor_unix,
-            Some(&skilllite_path),
+            &skilllite_path,
         )
     })
     .await
     {
-        Ok(payload) => crate::skilllite_bridge::LlmInvokeResult::ok(payload),
+        Ok(Ok(payload)) => crate::skilllite_bridge::LlmInvokeResult::ok(payload),
+        Ok(Err(err)) => crate::skilllite_bridge::LlmInvokeResult::err(
+            crate::skilllite_bridge::classify_llm_routing_error_message(&err),
+        ),
         Err(err) => crate::skilllite_bridge::LlmInvokeResult::err(
             crate::skilllite_bridge::classify_llm_routing_error_message(&err.to_string()),
         ),
@@ -39,7 +42,8 @@ pub async fn skilllite_list_evolution_pending(
     let ws = workspace.unwrap_or_else(|| ".".to_string());
     let skilllite_path = crate::skilllite_bridge::resolve_skilllite_path_app(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        crate::skilllite_bridge::list_evolution_pending_skills(&ws, Some(&skilllite_path))
+        crate::skilllite_bridge::list_evolution_pending_skills(&ws, &skilllite_path)
+            .unwrap_or_default()
     })
     .await
     .unwrap_or_default()
@@ -70,7 +74,7 @@ pub async fn skilllite_confirm_pending_skill(
         crate::skilllite_bridge::evolution_confirm_pending_skill(
             &ws,
             &skill_name,
-            Some(&skilllite_path),
+            &skilllite_path,
         )
     })
     .await
@@ -89,7 +93,7 @@ pub async fn skilllite_reject_pending_skill(
         crate::skilllite_bridge::evolution_reject_pending_skill(
             &ws,
             &skill_name,
-            Some(&skilllite_path),
+            &skilllite_path,
         )
     })
     .await
@@ -131,7 +135,7 @@ pub async fn skilllite_get_evolution_proposal_status(
         crate::skilllite_bridge::get_evolution_proposal_status(
             &ws,
             &proposal_id,
-            Some(&skilllite_path),
+            &skilllite_path,
         )
     })
     .await
@@ -148,7 +152,7 @@ pub async fn skilllite_load_evolution_backlog(
     let capped = limit.unwrap_or(30) as usize;
     let skilllite_path = crate::skilllite_bridge::resolve_skilllite_path_app(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        crate::skilllite_bridge::load_evolution_backlog(&ws, capped, Some(&skilllite_path))
+        crate::skilllite_bridge::load_evolution_backlog(&ws, capped, &skilllite_path)
     })
     .await
     .map_err(|e| e.to_string())?

@@ -96,7 +96,7 @@ flowchart TB
 | 进化 backlog / pending | `backlog.rs`、`pending.rs` | **L2** backlog/pending/proposal-status/confirm/reject `--json`（**已落地**） |
 | 手动触发进化 | `trigger.rs` | **L2** `evolution run --json --log-manual-trigger`（**已落地**） |
 | Life Pulse `growth_due` | `growth.rs` + `life_pulse.rs` | **L2** status JSON（缓存 30s）；`evolution run` 仍子进程 |
-| 猜你想问 | `followup_suggestions.rs`（`LlmClient`） | **L1** 扩展 `agent-rpc` *或* **L2** `skilllite suggest-followup --json` |
+| 猜你想问 | `followup_suggestions.rs` | **L2** `skilllite suggest-followup --json`（**已落地**） |
 | 运行时安装 UI | `desktop_services.rs` | **L2** `runtime probe/provision --json`（**已落地**；CLI 优先 + 回退） |
 | 技能列表 / 添加 | `skill_rpc.rs` + 部分 `core` | **L2** `skills list --json`（列表**已落地**）；add/repair 仍为 CLI 子进程 |
 | Prompts 对比 / 写入 | `prompt_artifact.rs` + `skilllite-fs` | **L3** CLI 读快照；写入走白名单路径 + `skilllite` |
@@ -131,7 +131,8 @@ flowchart TB
 | `skilllite runtime probe --json` | `RuntimeUiSnapshot` | **已落地** |
 | `skilllite runtime provision --json` | stderr 进度 JSON 行 + stdout `ProvisionRuntimesResult` | **已落地**；`--python` / `--node` / `--force` |
 | `skilllite skills list --json --workspace` | `DesktopSkillSnapshot[]`（对齐 `DesktopSkillInfo`） | **已落地** |
-| `skilllite suggest-followup` | `{ "suggestions": [...] }` | 可选 |
+| `skilllite suggest-followup --json` | `{ "suggestions": [...] }` | **已落地** |
+| `skilllite evolution authorize-capability --json` | `{ "proposal_id": "..." }` | **已落地** |
 
 **约定：** `--json` 仅在 stdout 输出**一个** JSON 文档；人类可读信息走 stderr。
 
@@ -227,9 +228,9 @@ tutorials/                            release-desktop CI
 
 ## 12. 拆仓前检查清单
 
-- [ ] `src-tauri/Cargo.toml` 无 `skilllite-{agent,sandbox,evolution}` path 依赖
-- [ ] 第 4 节能力均由 L1/L2/L3 覆盖
-- [ ] Assistant 启动时校验 `min_skilllite_version`
-- [ ] 中英文文档仍标 Desktop 为可选
-- [ ] 引擎侧 `--json` 契约测试
-- [ ] `deny.toml` 与 ARCHITECTURE 中 Desktop 执行链 = 仅子进程
+- [x] `src-tauri/Cargo.toml` 无 `skilllite-{agent,sandbox,evolution}` path 依赖
+- [x] 第 4 节能力均由 L1/L2/L3 覆盖（followup / authorize-capability 已接 CLI）
+- [x] Assistant 启动时校验 `min_skilllite_version`
+- [ ] 中英文文档仍标 Desktop 为可选（已有；拆仓时同步 README）
+- [ ] 引擎侧 `--json` 契约测试（建议拆仓 PR 前补 golden fixtures）
+- [x] `deny.toml` 与 ARCHITECTURE 中 Desktop 执行链 = 仅子进程

@@ -8,6 +8,7 @@ mod bundled_skills_sync;
 mod chat;
 mod evolution_cli;
 mod followup_suggestions;
+pub mod local;
 mod integrations;
 mod llm_routing_error;
 mod paths;
@@ -25,7 +26,10 @@ pub use followup_suggestions::followup_chat_suggestions;
 pub use integrations::*;
 pub use llm_routing_error::{classify_llm_routing_error_message, LlmInvokeResult};
 pub(crate) use paths::load_dotenv_for_child;
-pub use paths::{default_writable_workspace_dir, resolve_skilllite_path_app};
+pub use paths::{
+    default_writable_workspace_dir, ensure_skilllite_version, resolve_skilllite_path_app,
+    MIN_SKILLLITE_VERSION,
+};
 pub use sessions::*;
 pub use transcript::{clear_transcript, load_transcript, TranscriptMessage};
 pub use workspace::*;

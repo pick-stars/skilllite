@@ -32,6 +32,7 @@ pub fn register_all(reg: &mut CommandRegistry) {
     register_skills(reg);
     register_reindex(reg);
     register_wiki(reg);
+    register_suggest_followup(reg);
     register_security(reg);
     register_audit_report(reg);
     register_init(reg);
@@ -41,6 +42,29 @@ pub fn register_all(reg: &mut CommandRegistry) {
         register_agent(reg);
         register_schedule(reg);
     }
+}
+
+#[cfg(feature = "agent")]
+fn register_suggest_followup(reg: &mut CommandRegistry) {
+    reg.register(|cmd| {
+        if let Commands::SuggestFollowup {
+            json,
+            workspace,
+            transcript,
+        } = cmd
+        {
+            Some(
+                skilllite_commands::suggest_followup::cmd_suggest_followup(
+                    *json,
+                    workspace,
+                    transcript.as_deref(),
+                )
+                .map_err(Into::into),
+            )
+        } else {
+            None
+        }
+    });
 }
 
 fn register_wiki(reg: &mut CommandRegistry) {
@@ -504,6 +528,19 @@ fn register_agent(reg: &mut CommandRegistry) {
                 EvolutionAction::Explain { rule_id } => {
                     skilllite_commands::evolution::cmd_explain(rule_id)
                 }
+                EvolutionAction::AuthorizeCapability {
+                    json,
+                    workspace,
+                    tool_name,
+                    outcome,
+                    summary,
+                } => skilllite_commands::evolution::cmd_authorize_capability(
+                    *json,
+                    workspace,
+                    tool_name,
+                    outcome,
+                    summary,
+                ),
                 EvolutionAction::Confirm {
                     json,
                     workspace,

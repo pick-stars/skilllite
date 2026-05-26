@@ -152,7 +152,7 @@ pub fn read_prompt_snapshot_version_at(
 }
 
 pub fn list_prompt_snapshot_txns(filename: &str) -> Result<Vec<EvolutionSnapshotTxnDto>, String> {
-    list_prompt_snapshot_txns_at(&skilllite_core::paths::chat_root(), filename)
+    list_prompt_snapshot_txns_at(&crate::skilllite_bridge::local::chat_root(), filename)
 }
 
 fn list_prompt_snapshots_batch_at(
@@ -178,11 +178,11 @@ fn list_prompt_snapshots_batch_at(
 pub fn list_prompt_snapshots_batch(
     filenames: &[String],
 ) -> Result<HashMap<String, Vec<EvolutionSnapshotTxnDto>>, String> {
-    list_prompt_snapshots_batch_at(&skilllite_core::paths::chat_root(), filenames)
+    list_prompt_snapshots_batch_at(&crate::skilllite_bridge::local::chat_root(), filenames)
 }
 
 pub fn read_prompt_version_content(filename: &str, version_ref: &str) -> Result<String, String> {
-    read_prompt_snapshot_version_at(&skilllite_core::paths::chat_root(), filename, version_ref)
+    read_prompt_snapshot_version_at(&crate::skilllite_bridge::local::chat_root(), filename, version_ref)
 }
 
 /// Write UTF-8 to `chat_root/prompts/<filename>`（仅允许与快照对比相同白名单）。
@@ -194,10 +194,10 @@ pub fn write_chat_prompt_text_file(filename: &str, content: &str) -> Result<(), 
     if len > MAX_PROMPT_VERSION_BYTES {
         return Err(format!("内容超过 {} 字节上限", MAX_PROMPT_VERSION_BYTES));
     }
-    let path = skilllite_core::paths::chat_root()
+    let path = crate::skilllite_bridge::local::chat_root()
         .join("prompts")
         .join(filename);
-    skilllite_fs::write_file(&path, content).map_err(|e| e.to_string())
+    std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 
 fn evolved_prompt_files_from_changelog(chat_root: &Path) -> HashSet<String> {
@@ -247,7 +247,7 @@ fn get_earliest_snapshot_content(chat_root: &Path, filename: &str) -> Option<Str
 }
 
 pub fn load_evolution_diffs(_workspace: &str) -> Vec<EvolutionFileDiffDto> {
-    let chat_root = skilllite_core::paths::chat_root();
+    let chat_root = crate::skilllite_bridge::local::chat_root();
     let prompts_dir = chat_root.join("prompts");
     if !prompts_dir.exists() {
         return Vec::new();

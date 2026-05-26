@@ -1,7 +1,7 @@
 //! 工作区技能根路径与技能发现（供 CLI 桥与进化 UI 共用）。
 
 use crate::skilllite_bridge::paths::find_project_root;
-use skilllite_core::skill::discovery::{
+use crate::skilllite_bridge::local::{
     discover_skill_instances_in_workspace, resolve_skills_dir_with_legacy_fallback,
 };
 use std::path::PathBuf;
