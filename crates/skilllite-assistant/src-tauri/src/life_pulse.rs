@@ -144,7 +144,7 @@ fn emit(app: &tauri::AppHandle, kind: &str, detail: Option<String>) {
 // ─── Rhythm check (in-process, no LLM) ─────────────────────────────────────
 
 fn check_schedule_due(workspace: &std::path::Path) -> bool {
-    let schedule = match skilllite_core::schedule::load_schedule(workspace) {
+    let schedule = match skilllite_bridge::local::load_schedule(workspace) {
         Ok(Some(s)) => s,
         _ => return false,
     };
@@ -152,11 +152,11 @@ fn check_schedule_due(workspace: &std::path::Path) -> bool {
         return false;
     }
 
-    let mut state = skilllite_core::schedule::load_state(workspace);
-    skilllite_core::schedule::prepare_state_for_today(&mut state);
+    let mut state = skilllite_bridge::local::load_state(workspace);
+    skilllite_bridge::local::prepare_state_for_today(&mut state);
 
     let now = now_unix();
-    !skilllite_core::schedule::list_due_job_indices(&schedule, &state, now).is_empty()
+    !skilllite_bridge::local::list_due_job_indices(&schedule, &state, now).is_empty()
 }
 
 // ─── Subprocess helpers ─────────────────────────────────────────────────────
@@ -236,7 +236,7 @@ pub fn start(state: LifePulseState, skilllite_path: PathBuf, app: tauri::AppHand
 
             let interval = Duration::from_secs(
                 std::env::var(
-                    skilllite_core::config::env_keys::desktop::SKILLLITE_HEARTBEAT_INTERVAL_SECS,
+                    skilllite_bridge::local::env_keys::desktop::SKILLLITE_HEARTBEAT_INTERVAL_SECS,
                 )
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -275,6 +275,7 @@ pub fn start(state: LifePulseState, skilllite_path: PathBuf, app: tauri::AppHand
                         &workspace,
                         s.last_periodic_growth_unix.as_ref(),
                         overrides.as_ref(),
+                        &skilllite_path,
                     )
                 {
                     s.growth_running.store(true, Ordering::SeqCst);

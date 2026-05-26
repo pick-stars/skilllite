@@ -4,12 +4,14 @@
 //! for inspecting, controlling, and debugging the self-evolution engine.
 
 pub use crate::evolution_desktop::{
+    authorize_capability_evolution as desktop_authorize_capability_evolution,
     confirm_pending_skill as desktop_confirm_pending_skill,
     list_pending_skills as desktop_list_pending_skills, query_backlog_desktop,
     query_proposal_status as desktop_query_proposal_status,
     read_pending_skill_md as desktop_read_pending_skill_md,
-    reject_pending_skill as desktop_reject_pending_skill, EvolutionBacklogRowSnapshot,
-    EvolutionOpSnapshot, EvolutionProposalStatusSnapshot, PendingSkillSnapshot,
+    reject_pending_skill as desktop_reject_pending_skill, AuthorizeCapabilitySnapshot,
+    EvolutionBacklogRowSnapshot, EvolutionOpSnapshot, EvolutionProposalStatusSnapshot,
+    PendingSkillSnapshot,
 };
 pub use crate::evolution_status::{
     build_evolution_status_snapshot, cmd_status, EvolutionStatusParams, EvolutionStatusSnapshot,
@@ -498,6 +500,23 @@ pub fn cmd_reject(json: bool, workspace: &str, skill_name: &str) -> Result<()> {
         );
     } else {
         println!("✅ Skill '{}' 已拒绝", skill_name);
+    }
+    Ok(())
+}
+
+/// `skilllite evolution authorize-capability` — queue user-authorized capability evolution (desktop).
+pub fn cmd_authorize_capability(
+    json: bool,
+    workspace: &str,
+    tool_name: &str,
+    outcome: &str,
+    summary: &str,
+) -> Result<()> {
+    let snap = desktop_authorize_capability_evolution(workspace, tool_name, outcome, summary)?;
+    if json {
+        println!("{}", serde_json::to_string(&snap)?);
+    } else {
+        println!("proposal_id={}", snap.proposal_id);
     }
     Ok(())
 }

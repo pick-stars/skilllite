@@ -8,7 +8,7 @@ pub async fn skilllite_list_skills(
     let ws = workspace.unwrap_or_else(|| ".".to_string());
     let path = crate::skilllite_bridge::resolve_skilllite_path_app(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        crate::skilllite_bridge::list_skills(&ws, Some(&path))
+        crate::skilllite_bridge::list_skills(&ws, &path).unwrap_or_default()
     })
     .await
     .unwrap_or_default()
@@ -47,12 +47,14 @@ pub async fn skilllite_add_skill(
 
 #[tauri::command]
 pub async fn skilllite_remove_skills(
+    app: tauri::AppHandle,
     workspace: Option<String>,
     skill_names: Vec<String>,
 ) -> Result<String, String> {
     let ws = workspace.unwrap_or_else(|| ".".to_string());
+    let path = crate::skilllite_bridge::resolve_skilllite_path_app(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        crate::skilllite_bridge::remove_skills(&ws, &skill_names)
+        crate::skilllite_bridge::remove_skills(&ws, &skill_names, &path)
     })
     .await
     .map_err(|e| e.to_string())?

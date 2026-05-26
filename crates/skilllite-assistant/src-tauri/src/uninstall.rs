@@ -50,8 +50,8 @@ pub fn collect_uninstall_info(app: &tauri::AppHandle) -> Result<UninstallInfo, S
         .to_string_lossy()
         .to_string();
 
-    let chat = skilllite_core::paths::chat_root();
-    let data_root = skilllite_core::paths::data_root();
+    let chat = crate::skilllite_bridge::local::chat_root();
+    let data_root = crate::skilllite_bridge::local::data_root();
 
     Ok(UninstallInfo {
         platform: std::env::consts::OS.to_string(),
@@ -100,7 +100,7 @@ pub fn remove_local_user_data(
     remove_dir_all_logged(&app_data)?;
 
     if include_skilllite_chat {
-        let chat = skilllite_core::paths::chat_root();
+        let chat = crate::skilllite_bridge::local::chat_root();
         remove_dir_all_logged(&chat)?;
     }
     Ok(())

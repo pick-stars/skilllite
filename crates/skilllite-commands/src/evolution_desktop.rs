@@ -187,6 +187,33 @@ pub fn reject_pending_skill(workspace: &str, skill_name: &str) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AuthorizeCapabilitySnapshot {
+    pub proposal_id: String,
+}
+
+pub fn authorize_capability_evolution(
+    workspace: &str,
+    tool_name: &str,
+    outcome: &str,
+    summary: &str,
+) -> Result<AuthorizeCapabilitySnapshot> {
+    let _ = resolve_workspace_root(workspace);
+    let chat_root = skilllite_core::paths::chat_root();
+    let conn = skilllite_evolution::feedback::open_evolution_db(&chat_root)?;
+    let proposal_id =
+        skilllite_evolution::enqueue_user_capability_evolution(&conn, tool_name, outcome, summary)?;
+    let _ = skilllite_evolution::log_evolution_event(
+        &conn,
+        &chat_root,
+        "capability_evolution_authorized",
+        tool_name,
+        &format!("outcome={}, proposal_id={}", outcome, proposal_id),
+        workspace,
+    );
+    Ok(AuthorizeCapabilitySnapshot { proposal_id })
+}
+
 pub fn log_manual_evolution_trigger(
     workspace: &str,
     proposal_id: Option<&str>,

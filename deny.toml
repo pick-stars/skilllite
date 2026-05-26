@@ -7,16 +7,10 @@
 # Layering rules track `spec/architecture-boundaries.md`:
 # entry (skilllite, skilllite-assistant) -> commands/agent -> executor -> sandbox -> core.
 #
-# Desktop note (D1, 2026-04-20; rollback TASK-2026-045 — no skilllite-services yet):
-# Today: `skilllite-assistant` is allow-listed and consumes
-# `skilllite-{agent,sandbox,evolution}` directly; it is listed as an allowed
-# wrapper for those denied crates. The earlier `skilllite-services` shared
-# layer was rolled back (TASK-2026-045) after the duplication it was meant to
-# absorb proved smaller than expected; this file therefore no longer references
-# `skilllite-services`. The Desktop manifest deny invocation
-# (`cargo deny --manifest-path crates/skilllite-assistant/src-tauri/Cargo.toml check bans`)
-# remains in CI to enforce the boundary.
-# Target (D1′): thin client over released `skilllite` only — docs/en/ASSISTANT-SPLIT-ARCHITECTURE.md
+# Desktop (D1′, 2026-05): `skilllite-assistant` is a thin client over the released
+# `skilllite` binary (L1 agent-rpc + L2 CLI --json). It must NOT path-depend on
+# `skilllite-{agent,sandbox,evolution}` — see docs/en/ASSISTANT-SPLIT-ARCHITECTURE.md.
+# CI still runs: cargo deny --manifest-path crates/skilllite-assistant/src-tauri/Cargo.toml check bans
 
 [graph]
 # Resolve the same feature set CI builds with (full agent / artifact / swarm graph).
@@ -32,13 +26,13 @@ workspace-default-features = "warn"
 # This blocks lower layers from depending on upper layers (e.g. core -> agent).
 # Package names match Cargo.toml `name =` for each member.
 deny = [
-  { crate = "skilllite-agent", wrappers = ["skilllite", "skilllite-commands", "skilllite-assistant"], reason = "spec/architecture-boundaries.md — agent is above core/sandbox/executor; assistant is a first-class entry per D1 (2026-04-20)" },
+  { crate = "skilllite-agent", wrappers = ["skilllite", "skilllite-commands"], reason = "spec/architecture-boundaries.md — agent is above core/sandbox/executor" },
   { crate = "skilllite-commands", wrappers = ["skilllite"], reason = "spec/architecture-boundaries.md — commands are entry-adjacent; agent must not depend on commands" },
   { crate = "skilllite-executor", wrappers = ["skilllite", "skilllite-agent"], reason = "spec/architecture-boundaries.md — executor sits below agent" },
-  { crate = "skilllite-evolution", wrappers = ["skilllite-agent", "skilllite-commands", "skilllite-assistant"], reason = "evolution is orchestration; not a foundation crate (skilllite binary depends via commands; assistant Desktop bridge consumes it directly)" },
+  { crate = "skilllite-evolution", wrappers = ["skilllite-agent", "skilllite-commands"], reason = "evolution is orchestration; not a foundation crate (skilllite binary depends via commands)" },
   { crate = "skilllite-artifact", wrappers = ["skilllite", "skilllite-agent"], reason = "artifact store is agent/entry concern" },
   { crate = "skilllite-swarm", wrappers = ["skilllite"], reason = "swarm is optional entry feature" },
-  { crate = "skilllite-sandbox", wrappers = ["skilllite", "skilllite-agent", "skilllite-commands", "skilllite-evolution", "skilllite-assistant"], reason = "spec/architecture-boundaries.md — sandbox above core, below agent/commands/evolution; assistant is a first-class entry per D1 (2026-04-20)" },
+  { crate = "skilllite-sandbox", wrappers = ["skilllite", "skilllite-agent", "skilllite-commands", "skilllite-evolution"], reason = "spec/architecture-boundaries.md — sandbox above core, below agent/commands/evolution" },
 ]
 
 [bans.workspace-dependencies]

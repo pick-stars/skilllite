@@ -94,7 +94,7 @@ flowchart TB
 | Evolution backlog / pending | `backlog.rs`, `pending.rs` | **L2** `backlog --json --hide-closed`, `pending --json`, `proposal-status --json`, `confirm`/`reject --json` (**shipped**) |
 | Manual evolution trigger | `trigger.rs` | **L2** `skilllite evolution run --json --log-manual-trigger` (**shipped**) |
 | Life Pulse `growth_due` | `growth.rs` + `life_pulse.rs` | **L2** status JSON (cache 30s); keep subprocess for `evolution run` |
-| Follow-up chips | `followup_suggestions.rs` (`LlmClient`) | **L1** new `agent-rpc` method *or* **L2** `skilllite suggest-followup --json` |
+| Follow-up chips | `followup_suggestions.rs` | **L2** `skilllite suggest-followup --json` (**shipped**) |
 | Runtime install UI | `desktop_services.rs` | **L2** `runtime probe/provision --json` (**shipped**; CLI first + in-process fallback) |
 | Skill list / add | `skill_rpc.rs` + partial `core` | **L2** `skills list --json` (**shipped** for list); add/repair still CLI subprocess |
 | Prompts diff / write | `prompt_artifact.rs` + `skilllite-fs` | **L3** read snapshots via CLI; writes via allowlisted paths + `skilllite` or narrow FS helper |
@@ -129,7 +129,8 @@ Priority commands for parity with today’s Desktop bridge:
 | `skilllite runtime probe --json` | `RuntimeUiSnapshot` | **Shipped** |
 | `skilllite runtime provision --json` | stderr progress JSON lines + `ProvisionRuntimesResult` on stdout | **Shipped**; `--python` / `--node` / `--force` |
 | `skilllite skills list --json --workspace` | `DesktopSkillSnapshot[]` (desktop `DesktopSkillInfo`) | **Shipped** |
-| `skilllite suggest-followup` | `{ "suggestions": string[] }` | Optional; avoids extra RPC surface |
+| `skilllite suggest-followup --json` | `{ "suggestions": string[] }` | **Shipped** |
+| `skilllite evolution authorize-capability --json` | `{ "proposal_id": string }` | **Shipped** |
 
 **Convention:** `--json` always prints a single JSON document on stdout; human text on stderr only.
 
@@ -234,9 +235,9 @@ Engine contributors optimize for **MCP + CLI**; Assistant contributors optimize 
 
 ## 12. Checklist before extracting repo
 
-- [ ] `src-tauri/Cargo.toml` has zero `skilllite-{agent,sandbox,evolution}` path dependencies
-- [ ] All bridge features covered by L1/L2/L3 table (section 4)
-- [ ] `min_skilllite_version` enforced at Assistant startup
-- [ ] EN/ZH docs and START_PATHS still mark Desktop as optional
-- [ ] Engine contract tests for `--json` outputs
-- [ ] `deny.toml` updated; ARCHITECTURE.md execution chain for Desktop = subprocess only
+- [x] `src-tauri/Cargo.toml` has zero `skilllite-{agent,sandbox,evolution}` path dependencies
+- [x] All bridge features covered by L1/L2/L3 table (section 4)
+- [x] `min_skilllite_version` enforced at Assistant startup
+- [ ] EN/ZH docs and START_PATHS still mark Desktop as optional (present; refresh on extract)
+- [ ] Engine contract tests for `--json` outputs (golden fixtures recommended)
+- [x] `deny.toml` updated; ARCHITECTURE.md execution chain for Desktop = subprocess only

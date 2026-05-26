@@ -10,9 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use semver::Version;
-use skilllite_core::skill::{
-    discovery::resolve_skills_dir_with_legacy_fallback, metadata::parse_skill_metadata,
-};
+use crate::skilllite_bridge::local::resolve_skills_dir_with_legacy_fallback;
 use tauri::{AppHandle, Manager};
 
 /// `resource_dir()/bundled-skills/.skills/` — populated by `scripts/prebuild-skilllite.sh`.
@@ -90,7 +88,18 @@ fn skills_dir_has_any_skill(skills_root: &Path) -> bool {
 }
 
 fn read_declared_version(skill_dir: &Path) -> Option<String> {
-    parse_skill_metadata(skill_dir).ok().and_then(|m| m.version)
+    let md = fs::read_to_string(skill_dir.join("SKILL.md")).ok()?;
+    let front = md.split("---").nth(1)?;
+    for line in front.lines() {
+        let t = line.trim();
+        if let Some(rest) = t.strip_prefix("version:") {
+            let v = rest.trim().trim_matches('"').trim_matches('\'');
+            if !v.is_empty() {
+                return Some(v.to_string());
+            }
+        }
+    }
+    None
 }
 
 /// Parse a loose X.Y.Z from the start of the string (ignores pre-release suffixes for comparison).
