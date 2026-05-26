@@ -535,11 +535,7 @@ fn register_agent(reg: &mut CommandRegistry) {
                     outcome,
                     summary,
                 } => skilllite_commands::evolution::cmd_authorize_capability(
-                    *json,
-                    workspace,
-                    tool_name,
-                    outcome,
-                    summary,
+                    *json, workspace, tool_name, outcome, summary,
                 ),
                 EvolutionAction::Confirm {
                     json,

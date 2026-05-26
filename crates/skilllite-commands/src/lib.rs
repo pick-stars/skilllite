@@ -48,7 +48,7 @@ pub mod replay_quality;
 pub mod runtime;
 #[cfg(feature = "agent")]
 pub mod schedule;
+pub mod skill;
 #[cfg(feature = "agent")]
 pub mod suggest_followup;
-pub mod skill;
 pub mod wiki;
