@@ -30,9 +30,8 @@ fn env_lookup(map: &HashMap<String, String>, primary: &str, aliases: &[&str]) ->
 }
 
 fn llm_from_env(workspace_root: &std::path::Path) -> Result<(String, String, String)> {
-    let mut map: HashMap<String, String> = parse_dotenv_from_dir(workspace_root)
-        .into_iter()
-        .collect();
+    let mut map: HashMap<String, String> =
+        parse_dotenv_from_dir(workspace_root).into_iter().collect();
     for (k, v) in std::env::vars() {
         map.entry(k).or_insert(v);
     }
