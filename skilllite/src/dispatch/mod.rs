@@ -32,7 +32,6 @@ pub fn register_all(reg: &mut CommandRegistry) {
     register_skills(reg);
     register_reindex(reg);
     register_wiki(reg);
-    register_suggest_followup(reg);
     register_security(reg);
     register_audit_report(reg);
     register_init(reg);
@@ -41,6 +40,7 @@ pub fn register_all(reg: &mut CommandRegistry) {
         register_quickstart(reg);
         register_agent(reg);
         register_schedule(reg);
+        register_suggest_followup(reg);
     }
 }
 
