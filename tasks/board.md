@@ -1,10 +1,10 @@
 # Task Board
 
-Last updated: 2026-04-29 (TASK-2026-064 env-keys single-source done)
+Last updated: 2026-05-29 (TASK-2026-066 utf8 evolution log truncate in progress)
 
 ## In Progress
 
-- None.
+- `TASK-2026-066-utf8-evolution-log-truncate` - Status: `in_progress` - Owner: `agent`
 
 ## Ready
 
