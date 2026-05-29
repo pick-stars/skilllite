@@ -1,10 +1,10 @@
 # Task Board
 
-Last updated: 2026-05-29 (TASK-2026-066 utf8 evolution log truncate in progress)
+Last updated: 2026-05-29 (TASK-2026-066 utf8 evolution log truncate done)
 
 ## In Progress
 
-- `TASK-2026-066-utf8-evolution-log-truncate` - Status: `in_progress` - Owner: `agent`
+- None.
 
 ## Ready
 
@@ -17,6 +17,7 @@ Last updated: 2026-05-29 (TASK-2026-066 utf8 evolution log truncate in progress)
 
 ## Done
 
+- `TASK-2026-066-utf8-evolution-log-truncate` - Status: `done` - Owner: `agent`
 - `TASK-2026-064-env-keys-single-source` - Status: `done` - Owner: `agent`
 - `TASK-2026-063-extension-tool-metadata-dispatch` - Status: `done` - Owner: `agent`
 - `TASK-2026-062-wiki-lesson-optimization-template` - Status: `done` - Owner: `agent`

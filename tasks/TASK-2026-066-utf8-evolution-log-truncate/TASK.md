@@ -4,7 +4,7 @@
 
 - Task ID: `TASK-2026-066`
 - Title: Fix UTF-8-safe evolution trigger logging
-- Status: `in_progress`
+- Status: `done`
 - Priority: `P0`
 - Owner: `agent`
 - Contributors: Cursor automation
@@ -22,9 +22,9 @@ Recent desktop evolution L2 work added manual trigger logging for `skilllite evo
 
 ## Acceptance Criteria
 
-- [ ] Long Chinese or emoji summaries do not panic during manual trigger log clipping.
-- [ ] Existing preview truncation behavior remains unchanged except for UTF-8 safety.
-- [ ] Regression test covers the non-ASCII boundary case.
+- [x] Long Chinese or emoji summaries do not panic during manual trigger log clipping.
+- [x] Existing preview truncation behavior remains unchanged except for UTF-8 safety.
+- [x] Regression test covers the non-ASCII boundary case.
 
 ## Risks
 
@@ -37,6 +37,13 @@ Recent desktop evolution L2 work added manual trigger logging for `skilllite evo
 - Required tests: targeted `skilllite-commands` regression test; repository task validation.
 - Commands to run: `cargo fmt --check`; `cargo test -p skilllite-commands evolution_desktop`; `python3 scripts/validate_tasks.py`; broader cargo validation if time permits.
 - Manual checks: re-read modified source and task artifacts.
+
+## Validation Evidence
+
+- `rustup update stable && rustup default stable`: updated local toolchain from Rust/Cargo 1.83 to 1.96 because dependency `time 0.3.47` requires edition 2024 support.
+- `cargo fmt --check && cargo test -p skilllite-commands evolution_desktop && python3 scripts/validate_tasks.py`: exit 0 after toolchain update. The first targeted filter compiled successfully but selected 0 tests because `evolution_desktop` is gated behind `agent`; task validation passed with 66 task directories checked.
+- `cargo test -p skilllite-commands --features agent manual_trigger_summary_clip`: exit 0; 2 tests passed, including the UTF-8 boundary regression.
+- `cargo clippy --all-targets -- -D warnings && cargo clippy -p skilllite-commands --features agent --all-targets -- -D warnings && cargo test`: exit 0; full test output ended with all workspace tests/doc-tests passing.
 
 ## Regression Scope
 
