@@ -214,6 +214,10 @@ pub fn authorize_capability_evolution(
     Ok(AuthorizeCapabilitySnapshot { proposal_id })
 }
 
+fn clip_manual_trigger_summary(summary: &str) -> String {
+    truncate_utf8(summary, 480)
+}
+
 pub fn log_manual_evolution_trigger(
     workspace: &str,
     proposal_id: Option<&str>,
@@ -221,11 +225,7 @@ pub fn log_manual_evolution_trigger(
 ) -> Result<()> {
     let chat_root = skilllite_core::paths::chat_root();
     let conn = skilllite_evolution::feedback::open_evolution_db(&chat_root)?;
-    let mut clipped = summary.to_string();
-    if clipped.len() > 480 {
-        clipped.truncate(480);
-        clipped.push('…');
-    }
+    let clipped = clip_manual_trigger_summary(summary);
     let _ = skilllite_evolution::log_evolution_event(
         &conn,
         &chat_root,
@@ -235,4 +235,29 @@ pub fn log_manual_evolution_trigger(
         workspace,
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn manual_trigger_summary_clip_is_utf8_boundary_safe() {
+        let mut summary = "界".repeat(159);
+        summary.push('🙂');
+        summary.push_str("tail");
+
+        let clipped = clip_manual_trigger_summary(&summary);
+
+        assert!(clipped.ends_with('…'));
+        assert!(clipped.is_char_boundary(clipped.len()));
+        assert!(clipped.len() <= 480 + "…".len());
+    }
+
+    #[test]
+    fn manual_trigger_summary_clip_leaves_short_text_unchanged() {
+        let summary = "Evolution completed: 新技能已生成";
+
+        assert_eq!(clip_manual_trigger_summary(summary), summary);
+    }
 }

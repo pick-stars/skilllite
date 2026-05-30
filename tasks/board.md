@@ -1,6 +1,6 @@
 # Task Board
 
-Last updated: 2026-04-29 (TASK-2026-064 env-keys single-source done)
+Last updated: 2026-05-29 (TASK-2026-066 utf8 evolution log truncate done)
 
 ## In Progress
 
@@ -17,6 +17,7 @@ Last updated: 2026-04-29 (TASK-2026-064 env-keys single-source done)
 
 ## Done
 
+- `TASK-2026-066-utf8-evolution-log-truncate` - Status: `done` - Owner: `agent`
 - `TASK-2026-064-env-keys-single-source` - Status: `done` - Owner: `agent`
 - `TASK-2026-063-extension-tool-metadata-dispatch` - Status: `done` - Owner: `agent`
 - `TASK-2026-062-wiki-lesson-optimization-template` - Status: `done` - Owner: `agent`
