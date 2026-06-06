@@ -583,7 +583,11 @@ mod tests {
         }
     }
 
-    fn make_test_skill_in_dir(name: &str, desc: &str, skill_dir: std::path::PathBuf) -> LoadedSkill {
+    fn make_test_skill_in_dir(
+        name: &str,
+        desc: &str,
+        skill_dir: std::path::PathBuf,
+    ) -> LoadedSkill {
         let mut skill = make_test_skill(name, desc);
         skill.skill_dir = skill_dir;
         skill
