@@ -30,7 +30,7 @@
   - `cargo test -p skilllite-agent`: `test result: ok. 245 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`
   - `cargo clippy --all-targets -- -D warnings`: `Finished dev profile`
   - `cargo test`: doc tests and crate tests completed with `test result: ok`
-  - `python3 scripts/validate_tasks.py`: pending final run after board update
+  - `python3 scripts/validate_tasks.py`: `Task validation passed (67 task directories checked).`
 
 ## Decision
 
