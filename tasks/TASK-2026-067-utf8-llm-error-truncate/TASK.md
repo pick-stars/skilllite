@@ -4,7 +4,7 @@
 
 - Task ID: `TASK-2026-067`
 - Title: UTF-8 safe LLM error truncation
-- Status: `in_progress`
+- Status: `done`
 - Priority: `P0`
 - Owner: `agent`
 - Contributors:
@@ -22,9 +22,9 @@ LLM API error formatting truncates non-JSON response bodies with byte slicing. A
 
 ## Acceptance Criteria
 
-- [ ] `format_api_error` handles long non-JSON CJK/emoji bodies without panic and still includes the friendly status hint plus an ellipsis.
-- [ ] Skill reference content truncation does not split UTF-8 code points.
-- [ ] Relevant Rust tests, formatting, clippy, and task validation pass.
+- [x] `format_api_error` handles long non-JSON CJK/emoji bodies without panic and still includes the friendly status hint plus an ellipsis.
+- [x] Skill reference content truncation does not split UTF-8 code points.
+- [x] Relevant Rust tests, formatting, clippy, and task validation pass.
 
 ## Risks
 
